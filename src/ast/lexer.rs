@@ -10,7 +10,6 @@ pub enum Token {
     Keyword(Keyword), // let keyword
     Identifier(String), // keyword
     Integer(i64), // integer
-    Space, // whitespace
     Equal, // ==
     Assign, // =
     Semicolon,  // ;
@@ -89,9 +88,6 @@ impl<'a> Lexer <'a> {
     pub fn get_token(&mut self) -> Vec<Token> {
         let mut result = vec![];
         while &self.position < &self.input.chars().count()  {
-            println!("{:?}", &self.position);
-            println!("{:?}", &self.current());
-
             if let Some(c) = self.current() {
                 if c.is_ascii_alphabetic() {
                     result.push(self.read_identifier());
@@ -122,14 +118,11 @@ impl<'a> Lexer <'a> {
                         }
                     }
                 }
-                
-                if c == ';' {
-                    result.push(Token::Semicolon);
+                if c == ' ' {
                     self.advance();
                 }
-
-                if c == ' ' {
-                    result.push(Token::Space);
+                if c == ';' {
+                    result.push(Token::Semicolon);
                     self.advance();
                 }
             }
