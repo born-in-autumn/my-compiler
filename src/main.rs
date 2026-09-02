@@ -4,7 +4,7 @@ use ast::Lexer;
 use ast::Parser;
 
 fn main() {
-    let input = "let a = 1;";
+    let input = "let a = -1 + 2 * 3";
     let mut lexer = Lexer {
         input,
         position: 0
@@ -20,6 +20,7 @@ fn main() {
         position: 0
     };
     let ast = p.parse_program();
+    //Program { declarations: [VariableDeclaration(VariableDeclaration { name: StringLiteral("a"), initializer: BinaryExpression(BinaryExpression { left: UnaryExpression(UnaryExpression { prefix: Some(UnaryOperator(Minus)), value: IntegerLiteral(1) }), operator: BinaryOperator(AddOperator(Plus)), right: BinaryExpression(BinaryExpression { left: UnaryExpression(UnaryExpression { prefix: None, value: IntegerLiteral(2) }), operator: BinaryOperator(MulOperator(Mul)), right: UnaryExpression(UnaryExpression { prefix: None, value: IntegerLiteral(3) }) }) }) })] }
     println!("{:?}", ast);
 
 }

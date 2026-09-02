@@ -1,29 +1,34 @@
-
 #[derive(Debug)]
-pub struct Lexer <'a> {
+pub struct Lexer<'a> {
     pub position: usize,
     pub input: &'a str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    Keyword(Keyword), // let keyword
+    Keyword(Keyword),   // let keyword
     Identifier(String), // keyword
-    Integer(i64), // integer
-    Equal, // ==
-    Assign, // =
-    Semicolon,  // ;
-    Plus, // +
+    Integer(i64),       // integer
+    True,
+    False,
+    Equal,     // ==
+    Assign,    // =
+    Semicolon, // ;
+    NOT,       // !
+    Plus,      // +
+    Minus,     // -
+    Mul,       // *
+    Div,       // /
+    EOF,       // end
 }
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
     Let,
     For,
     While,
     Break,
 }
-impl<'a> Lexer <'a> {
-
+impl<'a> Lexer<'a> {
     // now
     fn current(&self) -> Option<char> {
         self.input.chars().nth(self.position)
@@ -34,9 +39,9 @@ impl<'a> Lexer <'a> {
         self.input.chars().nth(self.position + 1)
     }
 
-    // go to the next pointer 
+    // go to the next pointer
     fn advance(&mut self) {
-        self.position +=1;
+        self.position += 1;
     }
     fn read_identifier(&mut self) -> Token {
         let mut vec = vec![];
@@ -58,14 +63,13 @@ impl<'a> Lexer <'a> {
             "for" => Token::Keyword(Keyword::For),
             "break" => Token::Keyword(Keyword::Break),
             "while" => Token::Keyword(Keyword::While),
-            _ => Token::Identifier(s)
+            _ => Token::Identifier(s),
         };
 
         result
-        
     }
-    
-    fn read_integer(&mut self)  -> Token {
+
+    fn read_integer(&mut self) -> Token {
         let mut vec = vec![];
         loop {
             match self.current() {
@@ -83,17 +87,16 @@ impl<'a> Lexer <'a> {
         Token::Integer(int)
     }
 
-    
     //
     pub fn get_token(&mut self) -> Vec<Token> {
         let mut result = vec![];
-        while &self.position < &self.input.chars().count()  {
+        while &self.position < &self.input.chars().count() {
             if let Some(c) = self.current() {
                 if c.is_ascii_alphabetic() {
                     result.push(self.read_identifier());
                     continue;
                 }
-                
+
                 if c.is_ascii_digit() {
                     result.push(self.read_integer());
                     continue;
@@ -101,6 +104,24 @@ impl<'a> Lexer <'a> {
 
                 if c == '+' {
                     result.push(Token::Plus);
+                    self.advance();
+                }
+
+                if c == '-' {
+                    result.push(Token::Minus);
+                    self.advance();
+                }
+                if c == '*' {
+                    result.push(Token::Mul);
+                    self.advance();
+                }
+                if c == '/' {
+                    result.push(Token::Div);
+                    self.advance();
+                }
+
+                if c == '!' {
+                    result.push(Token::NOT);
                     self.advance();
                 }
 
@@ -126,11 +147,8 @@ impl<'a> Lexer <'a> {
                     self.advance();
                 }
             }
-
-
         }
 
         result
     }
-
 }
