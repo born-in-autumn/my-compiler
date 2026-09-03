@@ -1,4 +1,5 @@
 use crate::ast::ast::AddOperator::{Minus, Plus};
+use crate::ast::ast::BinaryOperator::{AddOperator, MulOperator};
 use crate::ast::ast::Identifier::StringLiteral;
 use crate::ast::ast::MulOperator::{Div, Mul};
 
@@ -79,8 +80,8 @@ impl Parser {
                         initializer = self.parse_expression();
                     }
                     Token::Integer(t) => {
-                        initializer = Expression::Identifier(t.to_string());
                         self.advance();
+                        initializer = self.parse_expression();
                     }
                     _ => {
                         println!("expect Expression but found {:?}", self.next_token());
@@ -100,7 +101,6 @@ impl Parser {
                     break;
                 }
                 _ => {
-                    println!("{:?}", self.current_token());
                     self.advance();
                     break;
                 }
@@ -109,21 +109,22 @@ impl Parser {
         VariableDeclaration { name, initializer }
     }
     fn current_token(&self) -> Token {
-        if self.position >= 9 {
+        if self.position >= self.tokens.len()  {
             return Token::EOF;
         }
         self.tokens[self.position].clone()
     }
     fn next_token(&self) -> &Token {
-        if self.position >= 8 {
-            ()
+        if self.position >= self.tokens.len() -1  {
+            return &Token::EOF;
         }
         &self.tokens[self.position + 1]
     }
     fn advance(&mut self) {
         self.position += 1;
     }
-    // -1 + 2 * 3
+    // -1 + 2 * 3 + 2
+    // 1 - 2 - 3
     fn parse_expression(&mut self) -> Expression {
         println!("parse expression");
         self.parse_add()
@@ -131,49 +132,66 @@ impl Parser {
 
     // + -
     fn parse_add(&mut self) -> Expression {
-        let left = self.parse_mul();
-        match self.current_token() {
-            Token::Plus => {
-                self.advance();
-                Expression::BinaryExpression(BinaryExpression {
-                    left: Box::new(left),
-                    operator: BinaryOperator(super::ast::BinaryOperator::AddOperator(Plus)),
-                    right: Box::new(self.parse_expression()),
-                })
+        let mut left = self.parse_mul();
+        loop {
+            match self.current_token() {
+                Token::Plus => {
+                    self.advance();
+                    let result = self.parse_mul();
+                    left = Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left),
+                        operator: BinaryOperator(AddOperator(Plus)),
+                        right: Box::new(result),
+                    })
+                }
+                Token::Minus => {
+                    self.advance();
+                    let result = self.parse_mul();
+                    left = Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left),
+                        operator: BinaryOperator(AddOperator(Minus)),
+                        right: Box::new(result),
+                    })
+                }
+                _ => {
+                    break;
+                }
             }
-            Token::Minus => {
-                self.advance();
-                Expression::BinaryExpression(BinaryExpression {
-                    left: Box::new(left),
-                    operator: BinaryOperator(super::ast::BinaryOperator::AddOperator(Minus)),
-                    right: Box::new(self.parse_expression()),
-                })
-            }
-            _ => left,
         }
+        left
     }
     // * /
+    // -1 + 2 * 3 / 4 + -4
     fn parse_mul(&mut self) -> Expression {
-        let left = self.parse_unary();
-        match self.current_token() {
-            Token::Mul => {
-                self.advance();
-                Expression::BinaryExpression(BinaryExpression {
-                    left: Box::new(left),
-                    operator: BinaryOperator(super::ast::BinaryOperator::MulOperator(Mul)),
-                    right: Box::new(self.parse_expression()),
-                })
+        let mut left = self.parse_unary();
+        // let operator = BinaryOperator(MulOperator(Mul));
+        // let right = self.parse_unary();
+         loop {
+            match self.current_token() {
+                Token::Mul => {
+                    self.advance();
+                    let result = self.parse_unary();
+                    left = Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left),
+                        operator: BinaryOperator(MulOperator(Mul)),
+                        right: Box::new(result),
+                    })
+                }
+                Token::Div => {
+                    self.advance();
+                    let result = self.parse_unary();
+                    left = Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left),
+                        operator: BinaryOperator(MulOperator(Div)),
+                        right: Box::new(result),
+                    })
+                }
+                _ => {
+                    break;
+                }
             }
-            Token::Div => {
-                self.advance();
-                Expression::BinaryExpression(BinaryExpression {
-                    left: Box::new(left),
-                    operator: BinaryOperator(super::ast::BinaryOperator::MulOperator(Div)),
-                    right: Box::new(self.parse_expression()),
-                })
-            }
-            _ => left,
         }
+        left
     }
     // - or !
     fn parse_unary(&mut self) -> Expression {
@@ -201,7 +219,9 @@ impl Parser {
                 self.advance();
                 PrimaryExpression::IntegerLiteral(i)
             }
-            _ => PrimaryExpression::IntegerLiteral(999999), // Error占位，未来再补
+            _ => {
+                PrimaryExpression::IntegerLiteral(999999)
+            } // Error占位，未来再补
         }
     }
 
