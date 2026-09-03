@@ -1,8 +1,8 @@
-
+mod lexer;
+mod parser;
 mod ast;
-use ast::Lexer;
-use ast::Parser;
-
+use lexer::Lexer;
+use parser::Parser;
 fn main() {
     let input = "let a = 1*2+3";
     let mut lexer = Lexer {

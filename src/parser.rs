@@ -1,16 +1,10 @@
-use crate::ast::ast::AddOperator::{Minus, Plus};
-use crate::ast::ast::BinaryOperator::{AddOperator, MulOperator};
-use crate::ast::ast::Identifier::StringLiteral;
-use crate::ast::ast::MulOperator::{Div, Mul};
-
-use crate::ast::ast::Declaration;
-use crate::ast::ast::Operator::BinaryOperator;
-use crate::ast::ast::{
-    BinaryExpression, Expression, Operator, PrimaryExpression, Program, UnaryExpression,
-    VariableDeclaration,
+use crate::ast::{
+    AddOperator::Minus, AddOperator::Plus, BinaryExpression, BinaryOperator::AddOperator,
+    BinaryOperator::MulOperator, Declaration, Expression, Identifier::StringLiteral,
+    MulOperator::Div, MulOperator::Mul, Operator, Operator::BinaryOperator, PrimaryExpression,
+    Program, UnaryExpression, VariableDeclaration,
 };
-use crate::ast::lexer::Keyword::Let;
-use crate::ast::lexer::Token::{self};
+use crate::lexer::{Keyword::Let, Span, Token, TokenKind};
 #[derive(Debug)]
 pub struct Parser {
     pub tokens: Vec<Token>,
@@ -21,8 +15,8 @@ impl Parser {
     pub fn parse_program(&mut self) -> Program {
         let mut declarations: Vec<Declaration> = vec![];
         while self.position < self.tokens.len() {
-            match self.current_token() {
-                Token::Keyword(Let) => {
+            match self.current_token().kind {
+                TokenKind::Keyword(Let) => {
                     // expect :VariableDeclaration { name: StringLiteral("a"), initializer: Identifier("1") }
                     declarations.push(Declaration::VariableDeclaration(
                         self.parse_variable_declaration(),
@@ -45,9 +39,9 @@ impl Parser {
         let mut name = StringLiteral("Error".to_string());
         let mut initializer = Expression::Identifier("Error".to_string());
         loop {
-            match self.current_token() {
-                Token::Keyword(Let) => match self.next_token() {
-                    Token::Identifier(t) => {
+            match self.current_token().kind {
+                TokenKind::Keyword(Let) => match self.next_token().kind {
+                    TokenKind::Identifier(t) => {
                         name = StringLiteral(t.to_string());
                         self.advance();
                     }
@@ -56,11 +50,11 @@ impl Parser {
                         break;
                     }
                 },
-                Token::Keyword(_for) => {
+                TokenKind::Keyword(_for) => {
                     break;
                 }
-                Token::Identifier(c) => match self.next_token() {
-                    Token::Assign => {
+                TokenKind::Identifier(_c) => match self.next_token().kind {
+                    TokenKind::Assign => {
                         self.advance();
                     }
                     _ => {
@@ -68,18 +62,18 @@ impl Parser {
                         break;
                     }
                 },
-                Token::Equal => {
+                TokenKind::Equal => {
                     break;
                 }
-                Token::Plus => {
+                TokenKind::Plus => {
                     break;
                 }
-                Token::Assign => match self.next_token() {
-                    Token::Minus => {
+                TokenKind::Assign => match self.next_token().kind {
+                    TokenKind::Minus => {
                         self.advance();
                         initializer = self.parse_expression();
                     }
-                    Token::Integer(t) => {
+                    TokenKind::Integer(_t) => {
                         self.advance();
                         initializer = self.parse_expression();
                     }
@@ -88,8 +82,8 @@ impl Parser {
                         break;
                     }
                 },
-                Token::Integer(e) => match self.next_token() {
-                    Token::Semicolon => {
+                TokenKind::Integer(_e) => match self.next_token().kind {
+                    TokenKind::Semicolon => {
                         self.advance();
                     }
                     _ => {
@@ -97,7 +91,7 @@ impl Parser {
                         break;
                     }
                 },
-                Token::Semicolon => {
+                TokenKind::Semicolon => {
                     break;
                 }
                 _ => {
@@ -109,16 +103,28 @@ impl Parser {
         VariableDeclaration { name, initializer }
     }
     fn current_token(&self) -> Token {
-        if self.position >= self.tokens.len()  {
-            return Token::EOF;
+        if self.position >= self.tokens.len() {
+            return Token {
+                span: Span {
+                    start: self.tokens.len(),
+                    end: self.tokens.len(),
+                },
+                kind: TokenKind::EOF,
+            };
         }
         self.tokens[self.position].clone()
     }
-    fn next_token(&self) -> &Token {
-        if self.position >= self.tokens.len() -1  {
-            return &Token::EOF;
+    fn next_token(&self) -> Token {
+        if self.position >= self.tokens.len() - 1 {
+            return Token {
+                span: Span {
+                    start: self.tokens.len(),
+                    end: self.tokens.len(),
+                },
+                kind: TokenKind::EOF,
+            };
         }
-        &self.tokens[self.position + 1]
+        self.tokens[self.position + 1].clone()
     }
     fn advance(&mut self) {
         self.position += 1;
@@ -134,8 +140,8 @@ impl Parser {
     fn parse_add(&mut self) -> Expression {
         let mut left = self.parse_mul();
         loop {
-            match self.current_token() {
-                Token::Plus => {
+            match self.current_token().kind {
+                TokenKind::Plus => {
                     self.advance();
                     let result = self.parse_mul();
                     left = Expression::BinaryExpression(BinaryExpression {
@@ -144,7 +150,7 @@ impl Parser {
                         right: Box::new(result),
                     })
                 }
-                Token::Minus => {
+                TokenKind::Minus => {
                     self.advance();
                     let result = self.parse_mul();
                     left = Expression::BinaryExpression(BinaryExpression {
@@ -166,9 +172,9 @@ impl Parser {
         let mut left = self.parse_unary();
         // let operator = BinaryOperator(MulOperator(Mul));
         // let right = self.parse_unary();
-         loop {
-            match self.current_token() {
-                Token::Mul => {
+        loop {
+            match self.current_token().kind {
+                TokenKind::Mul => {
                     self.advance();
                     let result = self.parse_unary();
                     left = Expression::BinaryExpression(BinaryExpression {
@@ -177,7 +183,7 @@ impl Parser {
                         right: Box::new(result),
                     })
                 }
-                Token::Div => {
+                TokenKind::Div => {
                     self.advance();
                     let result = self.parse_unary();
                     left = Expression::BinaryExpression(BinaryExpression {
@@ -195,8 +201,8 @@ impl Parser {
     }
     // - or !
     fn parse_unary(&mut self) -> Expression {
-        match self.current_token() {
-            Token::Minus => {
+        match self.current_token().kind {
+            TokenKind::Minus => {
                 self.advance();
                 Expression::UnaryExpression(UnaryExpression {
                     prefix: Some(Operator::UnaryOperator(super::ast::UnaryOperator::Minus)),
@@ -214,14 +220,12 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> PrimaryExpression {
-        match self.current_token() {
-            Token::Integer(i) => {
+        match self.current_token().kind {
+            TokenKind::Integer(i) => {
                 self.advance();
                 PrimaryExpression::IntegerLiteral(i)
             }
-            _ => {
-                PrimaryExpression::IntegerLiteral(999999)
-            } // Error占位，未来再补
+            _ => PrimaryExpression::IntegerLiteral(999999), // Error占位，未来再补
         }
     }
 
