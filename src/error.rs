@@ -1,5 +1,6 @@
 
 
-struct Error {
-
+pub enum  Error {
+    Message,
+    Span
 }

@@ -1,16 +1,17 @@
 mod lexer;
 mod parser;
 mod ast;
+mod error;
 use lexer::Lexer;
 use parser::Parser;
 fn main() {
-    let input = "let a = 1*2+3";
+    let input = "let a = -1+2*3";
     let mut lexer = Lexer {
         input,
         position: 0
     };
     let result = lexer.get_token();
-    println!("{:?}", lexer);
+    println!("lexer: {:?}", lexer);
 
     // expect: [ Keyword(Let), Space, Identifier("a"), Space, Assign, Space, Identifier("1"), Space, Plus, Space, Identifier("3"), Space, Plus, Space, Identifier("4"), Space, Assign, Space, Identifier("8"), Semicolon]
     println!("{:?}", result);

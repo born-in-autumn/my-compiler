@@ -3,24 +3,24 @@
 
 // let a = 1;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 
 pub struct Program {
     pub declarations: Vec<Declaration>
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 
 pub enum Declaration {
     VariableDeclaration(VariableDeclaration),
     FunctionDeclaration
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 
 pub struct VariableDeclaration {
     pub name: Identifier,
     pub initializer: Expression
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 
 pub enum Expression {
     Identifier(String),
@@ -28,14 +28,14 @@ pub enum Expression {
     UnaryExpression(UnaryExpression),
     IntegerLiteral(i64)
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BinaryExpression {
     pub left: Box<Expression>,
     pub operator:Operator,
     pub right: Box<Expression>
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 
 pub struct UnaryExpression {
     pub prefix: Option<Operator>,
@@ -48,39 +48,39 @@ pub struct MulExpression {
     pub operator: Option<BinaryOperator>
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PrimaryExpression {
     IntegerLiteral(i64),
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Operator {
     BinaryOperator(BinaryOperator),
     UnaryOperator(UnaryOperator)
 }
-#[derive(Debug)]
+#[derive(Debug,PartialEq, Clone )]
 pub enum BinaryOperator {
     MulOperator(MulOperator),
     AddOperator(AddOperator),
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum UnaryOperator {
     Minus, // -
     Not, // !
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum AddOperator {
     Plus,
     Minus
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum MulOperator {
     Mul,
     Div
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Identifier {
     StringLiteral(String)
 }

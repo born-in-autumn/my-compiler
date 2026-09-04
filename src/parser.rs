@@ -242,3 +242,26 @@ impl Parser {
     //     }
     // }
 }
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    use crate::Lexer;
+    #[test]
+    fn parse_program_test() {
+        let a = "let a = - 1 + 2 * 3";
+        let mut lexer = Lexer {
+            input: a,
+            position: 0
+        };
+        let result = lexer.get_token();
+        println!("{:?}", result);
+        let mut p = Parser {
+            tokens: result,
+            position: 0
+        };
+        let ast = p.parse_program();
+        assert_eq!(ast.declarations.len(), 1);
+    }
+}

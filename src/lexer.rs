@@ -254,3 +254,21 @@ impl<'a> Lexer<'a> {
         result
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::TokenKind::*;
+    #[test]
+    fn keyword_let_token() {
+        let a = "let a = 1*2+3";
+        let mut lexer = Lexer {
+            input: a,
+            position: 0
+        };
+        let result = lexer.get_token();
+        println!("{:?}", result);
+        assert_eq!(result, [Token { kind: Keyword(Let), span: Span { start: 0, end: 3 } }, Token { kind: Identifier("a".to_string()), span: Span { start: 4, end: 5 } }, Token { kind: Assign, span: Span { start: 6, end: 7 } }, Token { kind: Integer(1), span: Span { start: 8, end: 9 } }, Token { kind: Mul, span: Span { start: 9, end: 10 } }, Token { kind: Integer(2), span: Span { start: 10, end: 11 } }, Token { kind: Plus, span: Span { start: 11, end: 12 } }, Token { kind: Integer(3), span: Span { start: 12, end: 13 } }])
+    }
+}
