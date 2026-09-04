@@ -18,6 +18,6 @@ pub struct UnexpectedCharacter {
 #[derive(Debug)]
 
 pub struct UnexpectedToken {
-    message: String,
-    span: Span,
+   pub message: String,
+   pub span: Span,
 }

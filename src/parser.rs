@@ -4,6 +4,7 @@ use crate::ast::{
     MulOperator::Div, MulOperator::Mul, Operator, Operator::BinaryOperator, PrimaryExpression,
     Program, UnaryExpression, VariableDeclaration,
 };
+use crate::error::{CompilerError, UnexpectedToken};
 use crate::lexer::{Keyword::Let, Span, Token, TokenKind};
 #[derive(Debug)]
 pub struct Parser {
@@ -12,14 +13,14 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn parse_program(&mut self) -> Program {
+    pub fn parse_program(&mut self) -> Result<Program, CompilerError> {
         let mut declarations: Vec<Declaration> = vec![];
-        while self.position < self.tokens.len() {
+        while self.current_token().kind != TokenKind::EOF {
             match self.current_token().kind {
                 TokenKind::Keyword(Let) => {
                     // expect :VariableDeclaration { name: StringLiteral("a"), initializer: Identifier("1") }
                     declarations.push(Declaration::VariableDeclaration(
-                        self.parse_variable_declaration(),
+                        self.parse_variable_declaration()?,
                     ));
                 }
                 _ => {
@@ -27,7 +28,7 @@ impl Parser {
                 }
             }
         }
-        Program { declarations }
+        Ok(Program { declarations })
     }
 
     /**
@@ -35,7 +36,7 @@ impl Parser {
      *   Identifier("1"), Semicolon]
      */
     // let a = -1 + 2 * 3;
-    fn parse_variable_declaration(&mut self) -> VariableDeclaration {
+    fn parse_variable_declaration(&mut self) -> Result<VariableDeclaration, CompilerError> {
         let mut name = StringLiteral("Error".to_string());
         let mut initializer = Expression::Identifier("Error".to_string());
         loop {
@@ -71,11 +72,11 @@ impl Parser {
                 TokenKind::Assign => match self.next_token().kind {
                     TokenKind::Minus => {
                         self.advance();
-                        initializer = self.parse_expression();
+                        initializer = self.parse_expression()?;
                     }
                     TokenKind::Integer(_t) => {
                         self.advance();
-                        initializer = self.parse_expression();
+                        initializer = self.parse_expression()?;
                     }
                     _ => {
                         println!("expect Expression but found {:?}", self.next_token());
@@ -100,7 +101,7 @@ impl Parser {
                 }
             }
         }
-        VariableDeclaration { name, initializer }
+        Ok(VariableDeclaration { name, initializer })
     }
     fn current_token(&self) -> Token {
         if self.position >= self.tokens.len() {
@@ -131,33 +132,32 @@ impl Parser {
     }
     // -1 + 2 * 3 + 2
     // 1 - 2 - 3
-    fn parse_expression(&mut self) -> Expression {
-        println!("parse expression");
+    fn parse_expression(&mut self) -> Result<Expression, CompilerError> {
         self.parse_add()
     }
 
     // + -
-    fn parse_add(&mut self) -> Expression {
+    fn parse_add(&mut self) -> Result<Expression, CompilerError>{
         let mut left = self.parse_mul();
         loop {
             match self.current_token().kind {
                 TokenKind::Plus => {
                     self.advance();
                     let result = self.parse_mul();
-                    left = Expression::BinaryExpression(BinaryExpression {
-                        left: Box::new(left),
+                    left = Ok(Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left?),
                         operator: BinaryOperator(AddOperator(Plus)),
-                        right: Box::new(result),
-                    })
+                        right: Box::new(result?),
+                    }))
                 }
                 TokenKind::Minus => {
                     self.advance();
                     let result = self.parse_mul();
-                    left = Expression::BinaryExpression(BinaryExpression {
-                        left: Box::new(left),
+                    left = Ok(Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left?),
                         operator: BinaryOperator(AddOperator(Minus)),
-                        right: Box::new(result),
-                    })
+                        right: Box::new(result?),
+                    }))
                 }
                 _ => {
                     break;
@@ -168,29 +168,27 @@ impl Parser {
     }
     // * /
     // -1 + 2 * 3 / 4 + -4
-    fn parse_mul(&mut self) -> Expression {
+    fn parse_mul(&mut self) -> Result<Expression, CompilerError> {
         let mut left = self.parse_unary();
-        // let operator = BinaryOperator(MulOperator(Mul));
-        // let right = self.parse_unary();
         loop {
             match self.current_token().kind {
                 TokenKind::Mul => {
                     self.advance();
                     let result = self.parse_unary();
-                    left = Expression::BinaryExpression(BinaryExpression {
-                        left: Box::new(left),
+                    left = Ok(Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left?),
                         operator: BinaryOperator(MulOperator(Mul)),
-                        right: Box::new(result),
-                    })
+                        right: Box::new(result?),
+                    }))
                 }
                 TokenKind::Div => {
                     self.advance();
                     let result = self.parse_unary();
-                    left = Expression::BinaryExpression(BinaryExpression {
-                        left: Box::new(left),
+                    left = Ok(Expression::BinaryExpression(BinaryExpression {
+                        left: Box::new(left?),
                         operator: BinaryOperator(MulOperator(Div)),
-                        right: Box::new(result),
-                    })
+                        right: Box::new(result?),
+                    }))
                 }
                 _ => {
                     break;
@@ -200,32 +198,40 @@ impl Parser {
         left
     }
     // - or !
-    fn parse_unary(&mut self) -> Expression {
+    fn parse_unary(&mut self) -> Result<Expression, CompilerError> {
         match self.current_token().kind {
             TokenKind::Minus => {
                 self.advance();
-                Expression::UnaryExpression(UnaryExpression {
+                Ok(Expression::UnaryExpression(UnaryExpression {
                     prefix: Some(Operator::UnaryOperator(super::ast::UnaryOperator::Minus)),
-                    value: self.parse_primary(),
-                })
+                    value: self.parse_primary()?,
+                }))
             }
             _ => {
                 // 这里没有消耗任何Token，所以不advance
-                Expression::UnaryExpression(UnaryExpression {
+                Ok(Expression::UnaryExpression(UnaryExpression {
                     prefix: None,
-                    value: self.parse_primary(),
-                })
+                    value: self.parse_primary()?,
+                }))
             }
         }
     }
 
-    fn parse_primary(&mut self) -> PrimaryExpression {
+    fn parse_primary(&mut self) -> Result<PrimaryExpression, CompilerError> {
         match self.current_token().kind {
             TokenKind::Integer(i) => {
                 self.advance();
-                PrimaryExpression::IntegerLiteral(i)
+                Ok(PrimaryExpression::IntegerLiteral(i))
             }
-            _ => PrimaryExpression::IntegerLiteral(999999), // Error占位，未来再补
+            _ => {
+                Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: String::from("unexpected token"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position
+                    }
+                }))
+            }
         }
     }
 
@@ -249,7 +255,7 @@ mod tests {
     use super::*;
     use crate::Lexer;
     #[test]
-    fn parse_program_test() {
+    fn parse_program_test()  {
         let a = "let a = - 1 + 2 * 3";
         let mut lexer = Lexer {
             input: a,
@@ -262,6 +268,11 @@ mod tests {
             position: 0
         };
         let ast = p.parse_program();
-        assert_eq!(ast.declarations.len(), 1);
+        match ast {
+            Ok(node) => {
+                assert_eq!(node.declarations.len(), 1);
+            },
+            Err(_) => {}
+        }
     }
 }
