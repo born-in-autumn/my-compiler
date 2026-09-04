@@ -1,6 +1,23 @@
+use crate::lexer::Span;
 
 
-pub enum  Error {
-    Message,
-    Span
+
+
+#[derive(Debug)]
+
+pub enum CompilerError {
+    UnexpectedCharacter(UnexpectedCharacter),
+    UnexpectedToken(UnexpectedToken),
+}
+#[derive(Debug)]
+
+pub struct UnexpectedCharacter {
+   pub message: String,
+   pub  span: Span,
+}
+#[derive(Debug)]
+
+pub struct UnexpectedToken {
+    message: String,
+    span: Span,
 }

@@ -255,10 +255,10 @@ mod tests {
             input: a,
             position: 0
         };
-        let result = lexer.get_token();
+        let result = lexer.tokenize();
         println!("{:?}", result);
         let mut p = Parser {
-            tokens: result,
+            tokens: result.unwrap(),
             position: 0
         };
         let ast = p.parse_program();
