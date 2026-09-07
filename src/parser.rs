@@ -1,7 +1,6 @@
 use crate::ast::{
-    BinaryExpression,
-    Declaration, Expression, Operator,  PrimaryExpression,
-    Program, UnaryExpression, VariableDeclaration,BinaryOperator
+    BinaryExpression, BinaryOperator, Declaration, Expression, Operator, PrimaryExpression,
+    Program, UnaryExpression, VariableDeclaration,
 };
 use crate::error::{CompilerError, UnexpectedToken};
 use crate::lexer::{Keyword::Let, Span, Token, TokenKind};
@@ -34,70 +33,78 @@ impl Parser {
      *   expect: [ Keyword(Let),  Identifier("a"),  Assign,
      *   Identifier("1"), Semicolon]
      */
-    // let a = -1 + 2 * 3;
-    // let expect = TokenKind::Keyword(Let);
-    //     loop {
-    //         match self.current_token().kind {
-                
-    //         }
-    //     }
     fn parse_variable_declaration(&mut self) -> Result<VariableDeclaration, CompilerError> {
         let mut name = String::from("");
-        let mut initializer = Expression::Identifier(String::from(""));
-        loop {
-            match self.current_token().kind {
-                TokenKind::Keyword(Let) => match self.next_token().kind {
-                    TokenKind::Identifier(t) => {
-                        name = t;
-                        self.advance();
-                    }
-                    _ => {
-                        println!("expect identifier but found {:?}", self.next_token());
-                        break;
-                    }
-                },
-                TokenKind::Identifier(_c) => match self.next_token().kind {
-                    TokenKind::Assign => {
-                        self.advance();
-                    }
-                    _ => {
-                        println!("expect Assign symbol but found {:?}", self.next_token());
-                        break;
-                    }
-                },
-                TokenKind::Assign => match self.next_token().kind {
-                    TokenKind::Minus => {
-                        self.advance();
-                        initializer = self.parse_expression()?;
-                    }
-                    TokenKind::Integer(_t) => {
-                        self.advance();
-                        initializer = self.parse_expression()?;
-                    }
-                    _ => {
-                        println!("expect Expression but found {:?}", self.next_token());
-                        break;
-                    }
-                },
-                TokenKind::Integer(_e) => match self.next_token().kind {
-                    TokenKind::Semicolon => {
-                        self.advance();
-                    }
-                    _ => {
-                        println!("expect Semicolon symbol but found {:?}", self.next_token());
-                        break;
-                    }
-                },
-                TokenKind::Semicolon => {
-                    break;
-                }
-                _ => {
-                    self.advance();
-                    break;
-                }
+        let mut initializer = None;
+
+        // 根据文法递归下降解析
+        // 直接看第一次匹配是不是let
+        match self.current_token().kind {
+            TokenKind::Keyword(Let) => {
+                self.advance();
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 3,
+                    },
+                }));
             }
         }
-        Ok(VariableDeclaration { name, initializer: Some(initializer) })
+        // 直接看第二次匹配是不是变量名字
+        match self.current_token().kind {
+            TokenKind::Identifier(s) => {
+                name = s;
+                self.advance();
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 1,
+                    },
+                }));
+            }
+        }
+        // 第三次匹配看是不是Assign或者分号，如果是分号，直接结束，如果是等于号，继续看下面的
+        match self.current_token().kind {
+            TokenKind::Assign => {
+                self.advance();
+                initializer = Some(self.parse_expression()?);
+            }
+            TokenKind::Semicolon => {
+                self.advance();
+                return Ok(VariableDeclaration { name, initializer });
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 1,
+                    },
+                }));
+            }
+        }
+        // 最后看有没有分号
+        match self.current_token().kind {
+            TokenKind::Semicolon => {
+                self.advance();
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token, found ;"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 1,
+                    },
+                }));
+            }
+        }
+        Ok(VariableDeclaration { name, initializer })
     }
     fn current_token(&self) -> Token {
         if self.position >= self.tokens.len() {
@@ -133,7 +140,7 @@ impl Parser {
     }
 
     // + -
-    fn parse_add(&mut self) -> Result<Expression, CompilerError>{
+    fn parse_add(&mut self) -> Result<Expression, CompilerError> {
         let mut left = self.parse_mul();
         loop {
             match self.current_token().kind {
@@ -219,15 +226,13 @@ impl Parser {
                 self.advance();
                 Ok(PrimaryExpression::IntegerLiteral(i))
             }
-            _ => {
-                Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: String::from("unexpected token"),
-                    span: Span {
-                        start: self.position,
-                        end: self.position
-                    }
-                }))
-            }
+            _ => Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                message: String::from("unexpected token"),
+                span: Span {
+                    start: self.position,
+                    end: self.position,
+                },
+            })),
         }
     }
 }
@@ -238,23 +243,23 @@ mod tests {
     use super::*;
     use crate::Lexer;
     #[test]
-    fn parse_program_test()  {
+    fn parse_program_test() {
         let a = "let a = - 1 + 2 * 3";
         let mut lexer = Lexer {
             input: a,
-            position: 0
+            position: 0,
         };
         let result = lexer.tokenize();
         println!("{:?}", result);
         let mut p = Parser {
             tokens: result.unwrap(),
-            position: 0
+            position: 0,
         };
         let ast = p.parse_program();
         match ast {
             Ok(node) => {
                 assert_eq!(node.declarations.len(), 1);
-            },
+            }
             Err(_) => {}
         }
     }
