@@ -11,14 +11,13 @@ pub struct Program {
 #[derive(Debug, PartialEq, Clone)]
 
 pub enum Declaration {
-    VariableDeclaration(VariableDeclaration),
-    FunctionDeclaration
+    VariableDeclaration(VariableDeclaration) // 目前只做变量声明
 }
 #[derive(Debug, PartialEq, Clone)]
 
 pub struct VariableDeclaration {
-    pub name: Identifier,
-    pub initializer: Expression
+    pub name: String,
+    pub initializer: Option<Expression>
 }
 #[derive(Debug, PartialEq, Clone)]
 
@@ -31,7 +30,7 @@ pub enum Expression {
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryExpression {
     pub left: Box<Expression>,
-    pub operator:Operator,
+    pub operator:BinaryOperator,
     pub right: Box<Expression>
 }
 
@@ -42,15 +41,12 @@ pub struct UnaryExpression {
     pub value: PrimaryExpression
 }
 
-pub struct MulExpression {
-    pub left: UnaryExpression,
-    pub right: Option<UnaryExpression>,
-    pub operator: Option<BinaryOperator>
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum PrimaryExpression {
     IntegerLiteral(i64),
+    Identifier(String),
+    Expression(Box<Expression>)
 }
 #[derive(Debug, PartialEq, Clone)]
 pub enum Operator {
@@ -59,28 +55,13 @@ pub enum Operator {
 }
 #[derive(Debug,PartialEq, Clone )]
 pub enum BinaryOperator {
-    MulOperator(MulOperator),
-    AddOperator(AddOperator),
+    Mul,
+    Div,
+    Plus,
+    Minus 
 }
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnaryOperator {
     Minus, // -
-    Not, // !
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum AddOperator {
-    Plus,
-    Minus
-}
-#[derive(Debug, PartialEq, Clone)]
-pub enum MulOperator {
-    Mul,
-    Div
-}
-
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Identifier {
-    StringLiteral(String)
+    // Not, // !
 }

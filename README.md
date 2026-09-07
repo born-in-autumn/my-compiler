@@ -92,7 +92,9 @@ a==1;
 Parser Grammar
 
 Program
-└── Declaration*
+└── Statement*
+
+一个Declaration本质上是一种特殊的Statement
 
 Declaration
 ├── VariableDeclaration
@@ -115,3 +117,21 @@ Expression
 ├── AssignmentExpression
 ├── CallExpression
 ├── ...
+
+
+## 当前最小文法
+Program = VariableDeclaration*，一个程序，可以由许多变量声明组成
+### 变量声明VariableDeclaration
+1. 必须有let
+2. 必须有变量名
+3. 可以没有初始化部分
+4. 如果有初始化，等号后面需要一个完整的表达式
+5. 必须分号结尾
+### 表达式Expression
+1. 加减优先级低于乘除，加和减一个优先级，乘和除一个优先级，同优先级从左到右
+2. 一个负号可以作用于一个变量或者数字，例如：-a，-1，正号也是如此，当然+a，+1在解释时可以直接等效于a，1。也就是说parse到+时直接消费token然后解析后面的即可
+3. 不允许直接让两个一元运算符相邻，例如--1，+-1，但是可以-（-1），
+4. 支持括号，支持简单变量名
+### Primary
+1. 需要数字或者变量名
+2. 如果支持括号，则括号内可以是一个完整的表达式
