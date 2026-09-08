@@ -5,7 +5,7 @@ mod parser;
 use lexer::Lexer;
 use parser::Parser;
 fn main() {
-    let input = "let a = -1+2*3";
+    let input = "let a = 4 * (-1 + 2 * 3);";
     let mut lexer = Lexer { input, position: 0 };
     println!("lexer: {:?}", lexer);
 

@@ -45,7 +45,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token"),
+                    message: format!("unexpected token1"),
                     span: Span {
                         start: self.position,
                         end: self.position + 3,
@@ -56,12 +56,13 @@ impl Parser {
         // 直接看第二次匹配是不是变量名字
         match self.current_token().kind {
             TokenKind::Identifier(s) => {
+                println!("{:?}", name);
                 name = s;
                 self.advance();
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token"),
+                    message: format!("unexpected token2"),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -81,7 +82,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token"),
+                    message: format!("unexpected token3"),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -96,7 +97,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token, found ;"),
+                    message: format!("unexpected token4"),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -118,23 +119,24 @@ impl Parser {
         }
         self.tokens[self.position].clone()
     }
-    fn next_token(&self) -> Token {
-        if self.position >= self.tokens.len() - 1 {
-            return Token {
-                span: Span {
-                    start: self.tokens.len(),
-                    end: self.tokens.len(),
-                },
-                kind: TokenKind::EOF,
-            };
-        }
-        self.tokens[self.position + 1].clone()
-    }
+    // fn next_token(&self) -> Token {
+    //     if self.position >= self.tokens.len() - 1 {
+    //         return Token {
+    //             span: Span {
+    //                 start: self.tokens.len(),
+    //                 end: self.tokens.len(),
+    //             },
+    //             kind: TokenKind::EOF,
+    //         };
+    //     }
+    //     self.tokens[self.position + 1].clone()
+    // }
     fn advance(&mut self) {
         self.position += 1;
     }
     // -1 + 2 * 3 + 2
-    // 1 - 2 - 3
+    // 1 - (2 - 3)
+    // let a = 4 * （-1 + 2 * 3）* 3 * (5+ 2)
     fn parse_expression(&mut self) -> Result<Expression, CompilerError> {
         self.parse_add()
     }
@@ -211,11 +213,15 @@ impl Parser {
                 }))
             }
             _ => {
-                // 这里没有消耗任何Token，所以不advance
-                Ok(Expression::UnaryExpression(UnaryExpression {
-                    prefix: None,
-                    value: self.parse_primary()?,
-                }))
+                // 这里没有消耗任何Token，所以不advance，并且应该直接返回PrimaryExpression
+                match self.parse_primary() {
+                    Ok(epr) => {
+                        Ok(Expression::PrimaryExpression(epr))
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
             }
         }
     }
@@ -226,6 +232,21 @@ impl Parser {
                 self.advance();
                 Ok(PrimaryExpression::IntegerLiteral(i))
             }
+            TokenKind::Identifier(s) => {
+                self.advance();
+                Ok(PrimaryExpression::Identifier(s))
+            }
+            TokenKind::LeftParen => {
+                let result = self.parse_paren();
+                match result {
+                    Ok(r) => {
+                        Ok(PrimaryExpression::Expression(Box::new(r)))
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
             _ => Err(CompilerError::UnexpectedToken(UnexpectedToken {
                 message: String::from("unexpected token"),
                 span: Span {
@@ -234,6 +255,41 @@ impl Parser {
                 },
             })),
         }
+    }
+
+        // let a = 4 * （-1 + 2 * 3） * 2
+    fn parse_paren(&mut self) -> Result<Expression, CompilerError> {
+        match self.current_token().kind {
+            TokenKind::LeftParen => {
+                self.advance();
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 1,
+                    },
+                }));
+            }
+        };
+        let expression = self.parse_expression();
+        match self.current_token().kind {
+            TokenKind::RightParen => {
+                self.advance();
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 1,
+                    },
+                }));
+            }
+        }
+
+        expression
     }
 }
 

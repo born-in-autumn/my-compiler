@@ -34,6 +34,8 @@ pub enum TokenKind {
     Mul,       // *
     Div,       // /
     EOF,       // end
+    LeftParen, // (
+    RightParen // )
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -193,6 +195,26 @@ impl<'a> Lexer<'a> {
                         end: self.position,
                     },
                     kind: TokenKind::NOT,
+                })
+            }
+            Some('(') => {
+                self.advance();
+                Ok(Token {
+                    span: Span {
+                        start: self.position -1 ,
+                        end: self.position
+                    },
+                    kind: TokenKind::LeftParen
+                })
+            }
+            Some(')') => {
+                self.advance();
+                Ok(Token {
+                    span: Span {
+                        start: self.position -1 ,
+                        end: self.position
+                    },
+                    kind: TokenKind::RightParen
                 })
             }
             Some(';') => {

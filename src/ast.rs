@@ -25,6 +25,7 @@ pub enum Expression {
     Identifier(String),
     BinaryExpression(BinaryExpression),
     UnaryExpression(UnaryExpression),
+    PrimaryExpression(PrimaryExpression),
     IntegerLiteral(i64)
 }
 #[derive(Debug, PartialEq, Clone)]
