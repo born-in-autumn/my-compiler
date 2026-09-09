@@ -1,9 +1,9 @@
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Declaration, Expression, Operator, PrimaryExpression,
-    Program, UnaryExpression, VariableDeclaration,
+    BinaryExpression, BinaryOperator, Expression, Operator, PrimaryExpression, Program, Statement,
+    UnaryExpression, VariableDeclaration,
 };
 use crate::error::{CompilerError, UnexpectedToken};
-use crate::lexer::{Keyword::Let, Span, Token, TokenKind};
+use crate::lexer::{Keyword::Let, Keyword::Print, Span, Token, TokenKind};
 #[derive(Debug)]
 pub struct Parser {
     pub tokens: Vec<Token>,
@@ -12,23 +12,42 @@ pub struct Parser {
 
 impl Parser {
     pub fn parse_program(&mut self) -> Result<Program, CompilerError> {
-        let mut declarations: Vec<Declaration> = vec![];
+        let mut statements: Vec<Statement> = vec![];
         while self.current_token().kind != TokenKind::EOF {
             match self.current_token().kind {
                 TokenKind::Keyword(Let) => {
                     // expect :VariableDeclaration { name: StringLiteral("a"), initializer: Identifier("1") }
-                    declarations.push(Declaration::VariableDeclaration(
+                    statements.push(Statement::VariableDeclaration(
                         self.parse_variable_declaration()?,
                     ));
+                }
+                TokenKind::Keyword(Print) => {
+                    statements.push(Statement::PrintStatement(self.parse_print_statement()?))
                 }
                 _ => {
                     self.advance();
                 }
             }
         }
-        Ok(Program { declarations })
+        Ok(Program { statements })
     }
-
+    fn parse_print_statement(&mut self) -> Result<Expression, CompilerError> {
+        match self.current_token().kind {
+            TokenKind::Keyword(Print) => {
+                self.advance();
+                self.parse_expression()
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token"),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 3,
+                    },
+                }));
+            }
+        }
+    }
     /**
      *   expect: [ Keyword(Let),  Identifier("a"),  Assign,
      *   Identifier("1"), Semicolon]
@@ -45,7 +64,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token1"),
+                    message: format!("unexpected token"),
                     span: Span {
                         start: self.position,
                         end: self.position + 3,
@@ -62,7 +81,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token2"),
+                    message: format!("unexpected token"),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -82,7 +101,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token3"),
+                    message: format!("unexpected token"),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -97,7 +116,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token4"),
+                    message: format!("unexpected token"),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -215,9 +234,7 @@ impl Parser {
             _ => {
                 // 这里没有消耗任何Token，所以不advance，并且应该直接返回PrimaryExpression
                 match self.parse_primary() {
-                    Ok(epr) => {
-                        Ok(Expression::PrimaryExpression(epr))
-                    }
+                    Ok(epr) => Ok(Expression::PrimaryExpression(epr)),
                     Err(e) => {
                         return Err(e);
                     }
@@ -239,9 +256,7 @@ impl Parser {
             TokenKind::LeftParen => {
                 let result = self.parse_paren();
                 match result {
-                    Ok(r) => {
-                        Ok(PrimaryExpression::Expression(Box::new(r)))
-                    }
+                    Ok(r) => Ok(PrimaryExpression::Expression(Box::new(r))),
                     Err(e) => {
                         return Err(e);
                     }
@@ -257,7 +272,7 @@ impl Parser {
         }
     }
 
-        // let a = 4 * （-1 + 2 * 3） * 2
+    // let a = 4 * （-1 + 2 * 3） * 2
     fn parse_paren(&mut self) -> Result<Expression, CompilerError> {
         match self.current_token().kind {
             TokenKind::LeftParen => {
@@ -314,7 +329,7 @@ mod tests {
         let ast = p.parse_program();
         match ast {
             Ok(node) => {
-                assert_eq!(node.declarations.len(), 1);
+                assert_eq!(node.statements.len(), 1);
             }
             Err(_) => {}
         }

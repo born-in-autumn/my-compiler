@@ -2,6 +2,7 @@ mod ast;
 mod error;
 mod lexer;
 mod parser;
+mod interpreter;
 use lexer::Lexer;
 use parser::Parser;
 fn main() {

@@ -19,16 +19,22 @@ IR
     ↓
 Code Generation
 
+## Roadmap
+1. 词法分析器
+2. AST：整数、标识符、二元运算、一元运算、括号包裹的表达式
+3. 递归下降 parser：能解析 let 语句，也能解析加减乘除、负号、括号、变量引用
+
 ## TODO
 
 ### Lexer
 - [x] Basic tokenization
 
 ### Parser
-- [ ] VariableDeclaration
-- [ ] Literal
-- [ ] Identifier
-- [ ] BinaryExpression
+
+- [x] VariableDeclaration
+- [x] Literal
+- [x] Identifier
+- [x] BinaryExpression
 - [ ] ...
 
 ### AST

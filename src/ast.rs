@@ -6,13 +6,20 @@
 #[derive(Debug, PartialEq, Clone)]
 
 pub struct Program {
-    pub declarations: Vec<Declaration>
+    pub statements: Vec<Statement>,
 }
 #[derive(Debug, PartialEq, Clone)]
 
-pub enum Declaration {
-    VariableDeclaration(VariableDeclaration) // 目前只做变量声明
+
+pub enum Statement {
+    VariableDeclaration(VariableDeclaration),
+    PrintStatement(Expression)
 }
+
+
+// pub enum Declaration {
+//     VariableDeclaration(VariableDeclaration) // 目前只做变量声明
+// }
 #[derive(Debug, PartialEq, Clone)]
 
 pub struct VariableDeclaration {
