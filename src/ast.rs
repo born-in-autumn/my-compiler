@@ -29,11 +29,9 @@ pub struct VariableDeclaration {
 #[derive(Debug, PartialEq, Clone)]
 
 pub enum Expression {
-    Identifier(String),
     BinaryExpression(BinaryExpression),
     UnaryExpression(UnaryExpression),
     PrimaryExpression(PrimaryExpression),
-    IntegerLiteral(i64)
 }
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryExpression {
@@ -45,7 +43,7 @@ pub struct BinaryExpression {
 #[derive(Debug, PartialEq, Clone)]
 
 pub struct UnaryExpression {
-    pub prefix: Option<Operator>,
+    pub prefix: Option<UnaryOperator>,
     pub value: PrimaryExpression
 }
 

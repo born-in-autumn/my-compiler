@@ -1,6 +1,5 @@
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Expression, Operator, PrimaryExpression, Program, Statement,
-    UnaryExpression, VariableDeclaration,
+    BinaryExpression, BinaryOperator, Expression, Operator, PrimaryExpression, Program, Statement, UnaryExpression, UnaryOperator, VariableDeclaration,
 };
 use crate::error::{CompilerError, UnexpectedToken};
 use crate::lexer::{Keyword::Let, Keyword::Print, Span, Token, TokenKind};
@@ -227,7 +226,7 @@ impl Parser {
             TokenKind::Minus => {
                 self.advance();
                 Ok(Expression::UnaryExpression(UnaryExpression {
-                    prefix: Some(Operator::UnaryOperator(super::ast::UnaryOperator::Minus)),
+                    prefix: Some(UnaryOperator::Minus),
                     value: self.parse_primary()?,
                 }))
             }
