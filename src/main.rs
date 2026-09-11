@@ -3,10 +3,13 @@ mod error;
 mod lexer;
 mod parser;
 mod interpreter;
+use std::collections::HashMap;
+
 use lexer::Lexer;
 use parser::Parser;
+use crate::interpreter::Interpreter;
 fn main() {
-    let input = "let a = 4 * (-1 + 2 * 3);print a";
+    let input = "let a = 4 * (-1 + 2 * 3);print a;";
     let mut lexer = Lexer { input, position: 0 };
     println!("lexer: {:?}", lexer);
 
@@ -21,12 +24,23 @@ fn main() {
                 tokens: res,
                 position: 0,
             };
-            let ast = p.parse_program();
-            //Program { declarations: [VariableDeclaration(VariableDeclaration { name: StringLiteral("a"), initializer: BinaryExpression(BinaryExpression { left: UnaryExpression(UnaryExpression { prefix: Some(UnaryOperator(Minus)), value: IntegerLiteral(1) }), operator: BinaryOperator(AddOperator(Plus)), right: BinaryExpression(BinaryExpression { left: UnaryExpression(UnaryExpression { prefix: None, value: IntegerLiteral(2) }), operator: BinaryOperator(MulOperator(Mul)), right: UnaryExpression(UnaryExpression { prefix: None, value: IntegerLiteral(3) }) }) }) })] }
-            println!("{:?}", ast);
+            let program = p.parse_program();
+            println!("{:?}", program);
+            let mut interpreter = Interpreter {
+                env: HashMap::new()
+            };
+            match program {
+                Ok(ast) => {
+                    for i in ast.statements {
+                        interpreter.execute_stmt(&i);
+                    }
+                }
+                Err(_e) => {}
+            }
         }
         Err(e) => {
             eprintln!("{:?}", e);
         }
     };
+
 }

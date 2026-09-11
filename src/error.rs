@@ -13,11 +13,21 @@ pub enum CompilerError {
 
 pub struct UnexpectedCharacter {
    pub message: String,
-   pub  span: Span,
+   pub span: Span,
 }
 #[derive(Debug)]
 
 pub struct UnexpectedToken {
    pub message: String,
    pub span: Span,
+}
+#[derive(Debug)]
+
+pub enum RunTimeError {
+   UndefinedBehavior(UndefinedBehavior)
+}
+#[derive(Debug)]
+
+pub struct UndefinedBehavior {
+   pub message: String,
 }

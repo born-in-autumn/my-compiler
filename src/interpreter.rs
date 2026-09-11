@@ -1,15 +1,17 @@
-use std::collections::HashMap;
-
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Statement, UnaryExpression, UnaryOperator::Minus, VariableDeclaration,
+    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Statement, UnaryExpression,
+    UnaryOperator::Minus, VariableDeclaration,
 };
+use crate::error::{RunTimeError, UndefinedBehavior};
+use std::collections::HashMap;
 pub struct Interpreter {
-    env: HashMap<String, Value>,
+    pub env: HashMap<String, Value>,
 }
 
-#[derive(Debug)]
-enum Value {
+#[derive(Debug, Clone)]
+pub enum Value {
     Integer(i64),
+    None,
 }
 
 /**
@@ -28,7 +30,7 @@ enum Value {
  *
  */
 impl Interpreter {
-    fn execute_stmt(&self, stmt: &Statement) {
+    pub fn execute_stmt(&mut self, stmt: &Statement) {
         match stmt {
             Statement::PrintStatement(e) => {
                 // TODO：需要取hashmap，晚点实现
@@ -40,76 +42,137 @@ impl Interpreter {
         }
     }
 
-    fn execute_var_declaration(&self, d: &VariableDeclaration) {
+    fn execute_var_declaration(&mut self, d: &VariableDeclaration) {
         // 标识符是hashmap的Key，先判断initializer是否有值，如果没值，直接把None存到hashmap里
-        // 如果有值，则正常把标识符对应的值存进去
-    }
-
-    fn eval_expr(&self, expr: &Expression) -> Value {
-        match expr {
-            Expression::BinaryExpression(e) => self.eval_binary_expr(e),
-            Expression::PrimaryExpression(e) => self.eval_primary_expr(e),
-            Expression::UnaryExpression(e) => self.eval_unary_expr(e),
+        match &d.initializer {
+            Some(e) => {
+                // 如果有值，则正常把标识符对应的值存进去
+                println!("{:?}", d.name.clone());
+                self.env.insert(d.name.clone(), self.eval_expr(&e).unwrap());
+            }
+            None => {
+                self.env.insert(d.name.clone(), Value::None);
+            }
         }
     }
 
-    fn eval_binary_expr(&self, expr: &BinaryExpression) -> Value {
+    // let input = "let a = 4 * (-1 + 2 * 3);print a;";
+    fn eval_expr(&self, expr: &Expression) -> Result<Value, RunTimeError> {
+        println!("abc:{:?}", expr);
+        match expr {
+            Expression::BinaryExpression(e) => Ok(self.eval_binary_expr(e))?,
+            Expression::PrimaryExpression(e) => Ok(self.eval_primary_expr(e))?,
+            Expression::UnaryExpression(e) => Ok(self.eval_unary_expr(e))?,
+        }
+    }
+
+    fn eval_binary_expr(&self, expr: &BinaryExpression) -> Result<Value, RunTimeError> {
         let left_value = self.eval_expr(&expr.left);
         let right_value = self.eval_expr(&expr.right);
         let mut left = None;
         let mut right = None;
 
         match left_value {
-            Value::Integer(i) => {
+            Ok(Value::Integer(i)) => {
+                println!("1");
                 left = Some(i);
+            }
+            Ok(Value::None) => {
+                println!("2");
+
+                return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                    message: format!("Undefined behavior1"),
+                }));
+            }
+            Err(e) => {
+                println!("3");
+
+                return Err(e);
             }
         }
         match right_value {
-            Value::Integer(i) => {
+            Ok(Value::Integer(i)) => {
+                println!("4");
+
                 right = Some(i);
+            }
+            Ok(Value::None) => {
+                println!("5");
+
+                return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                    message: format!("Undefined behavior2"),
+                }));
+            }
+            Err(e) => {
+                println!("6");
+
+                return Err(e);
             }
         }
         match expr.operator {
             BinaryOperator::Mul => {
-                return Value::Integer(left.unwrap() * right.unwrap());
+                return Ok(Value::Integer(left.unwrap() * right.unwrap()));
             }
             BinaryOperator::Div => {
-                return Value::Integer(left.unwrap() / right.unwrap());
+                return Ok(Value::Integer(left.unwrap() / right.unwrap()));
             }
             BinaryOperator::Plus => {
-                return Value::Integer(left.unwrap() + right.unwrap());
+                return Ok(Value::Integer(left.unwrap() + right.unwrap()));
             }
             BinaryOperator::Minus => {
-                return Value::Integer(left.unwrap() - right.unwrap());
+                return Ok(Value::Integer(left.unwrap() - right.unwrap()));
             }
         }
     }
 
-    fn eval_unary_expr(&self, expr: &UnaryExpression) -> Value {
+    fn eval_unary_expr(&self, expr: &UnaryExpression) -> Result<Value, RunTimeError> {
+        println!("7");
+
         match &expr.prefix {
             Some(op) => match op {
                 Minus => match self.eval_primary_expr(&expr.value) {
-                    Value::Integer(i) => Value::Integer(-i),
+                    Ok(Value::Integer(i)) => Ok(Value::Integer(-i)),
+                    Ok(Value::None) => {
+                        return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                            message: format!("Undefined behavior3"),
+                        }));
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
                 },
             },
-            _ => self.eval_primary_expr(&expr.value),
+            _ => Ok(self.eval_primary_expr(&expr.value))?,
         }
     }
 
     //直接返回一个expr结果
-    fn eval_primary_expr(&self, expr: &PrimaryExpression) -> Value {
+    fn eval_primary_expr(&self, expr: &PrimaryExpression) -> Result<Value, RunTimeError> {
         match expr {
             PrimaryExpression::IntegerLiteral(number) => {
-                return Value::Integer(*number);
+                return Ok(Value::Integer(*number));
+            }
+            PrimaryExpression::Expression(e) => {
+                return Ok(self.eval_expr(&Box::new(e))?);
+            }
+            PrimaryExpression::Identifier(i) => {
+                // 去找hashmap
+                match self.env.get(i) {
+                    Some(v) => {
+                        return Ok(v.clone());
+                    }
+                    None => {
+                        return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                            message: format!("Undefined Identifier i"),
+                        }));
+                    }
+                }
             }
             _ => {
-                return Value::Integer(9999);
-            } // PrimaryExpression::Identifier(i) => {
-
-              // }
-              // PrimaryExpression::Expression(e) => {
-
-              // }
+                return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                    message: format!("Undefined behavior4"),
+                }));
+            }
         }
     }
 }
