@@ -34,7 +34,9 @@ impl Interpreter {
         match stmt {
             Statement::PrintStatement(e) => {
                 // TODO：需要取hashmap，晚点实现
-                println!("{:?}", self.eval_expr(&e));
+                let res = self.eval_expr(&e);
+                
+                println!("{:?}", res.unwrap());
             }
             Statement::VariableDeclaration(d) => {
                 self.execute_var_declaration(d);
@@ -47,7 +49,6 @@ impl Interpreter {
         match &d.initializer {
             Some(e) => {
                 // 如果有值，则正常把标识符对应的值存进去
-                println!("{:?}", d.name.clone());
                 self.env.insert(d.name.clone(), self.eval_expr(&e).unwrap());
             }
             None => {
@@ -58,7 +59,6 @@ impl Interpreter {
 
     // let input = "let a = 4 * (-1 + 2 * 3);print a;";
     fn eval_expr(&self, expr: &Expression) -> Result<Value, RunTimeError> {
-        println!("abc:{:?}", expr);
         match expr {
             Expression::BinaryExpression(e) => Ok(self.eval_binary_expr(e))?,
             Expression::PrimaryExpression(e) => Ok(self.eval_primary_expr(e))?,
@@ -74,37 +74,31 @@ impl Interpreter {
 
         match left_value {
             Ok(Value::Integer(i)) => {
-                println!("1");
                 left = Some(i);
             }
             Ok(Value::None) => {
-                println!("2");
 
                 return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
                     message: format!("Undefined behavior1"),
                 }));
             }
             Err(e) => {
-                println!("3");
 
                 return Err(e);
             }
         }
         match right_value {
             Ok(Value::Integer(i)) => {
-                println!("4");
 
                 right = Some(i);
             }
             Ok(Value::None) => {
-                println!("5");
 
                 return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
                     message: format!("Undefined behavior2"),
                 }));
             }
             Err(e) => {
-                println!("6");
 
                 return Err(e);
             }
@@ -126,7 +120,6 @@ impl Interpreter {
     }
 
     fn eval_unary_expr(&self, expr: &UnaryExpression) -> Result<Value, RunTimeError> {
-        println!("7");
 
         match &expr.prefix {
             Some(op) => match op {

@@ -11,12 +11,12 @@ use crate::interpreter::Interpreter;
 fn main() {
     let input = "let a = 4 * (-1 + 2 * 3);print a;";
     let mut lexer = Lexer { input, position: 0 };
-    println!("lexer: {:?}", lexer);
+    // println!("lexer: {:?}", lexer);
 
     let result = lexer.tokenize();
 
     // expect: [ Keyword(Let), Space, Identifier("a"), Space, Assign, Space, Identifier("1"), Space, Plus, Space, Identifier("3"), Space, Plus, Space, Identifier("4"), Space, Assign, Space, Identifier("8"), Semicolon]
-    println!("{:?}", result);
+    // println!("{:?}", result);
 
     match result {
         Ok(res) => {
@@ -25,7 +25,7 @@ fn main() {
                 position: 0,
             };
             let program = p.parse_program();
-            println!("{:?}", program);
+            // println!("{:?}", program);
             let mut interpreter = Interpreter {
                 env: HashMap::new()
             };
