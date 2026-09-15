@@ -3,6 +3,7 @@ mod error;
 mod lexer;
 mod parser;
 mod interpreter;
+mod lower;
 use std::collections::HashMap;
 
 use lexer::Lexer;
