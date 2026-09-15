@@ -2,6 +2,7 @@ use crate::ast::{
     BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Statement, UnaryExpression,
     UnaryOperator::Minus, VariableDeclaration,
 };
+use BinaryOperator::*;
 
 /**
  *
@@ -18,6 +19,7 @@ use crate::ast::{
  */
 
 // IR Module
+#[derive(Debug)]
 pub enum IrInst {
     Const {
         dst: Temp,
@@ -45,23 +47,30 @@ pub enum IrInst {
         src: IrValue,
     },
 }
+#[derive(Debug)]
+
 pub struct Temp {
-    idx: i64,
+    pub idx: i64,
 }
+#[derive(Debug)]
+
 pub enum IrValue {
     Const(i64),
     Temp(Temp),
 }
+#[derive(Debug)]
+
 pub enum IrOperator {
     Plus,
     Sub,
     Mul,
     Div,
 }
+#[derive(Debug)]
 
 pub struct IrGen {
-    instructments: Vec<IrInst>,
-    idx: i64,
+    pub instructments: Vec<IrInst>,
+    pub idx: i64,
 }
 
 /**
@@ -80,162 +89,7 @@ pub struct IrGen {
  *
  */
 
-impl IrInst {
-    pub fn lower_stmt(&mut self, stmt: &Statement, ir_box: &mut IrGen) {
-        match stmt {
-            Statement::PrintStatement(e) => {
-                let res = self.lower_expr(&e, ir_box);
-                ir_box.instructments.push(IrInst::Print { src: res });
-            }
-            Statement::VariableDeclaration(d) => {
-                self.lower_var_declaration(d, ir_box);
-            }
-        }
-    }
-    // let a = 1; let b;
-    fn lower_var_declaration(&mut self, d: &VariableDeclaration, ir_box: &mut IrGen) -> IrValue {
-        match &d.initializer {
-            Some(e) => {
-                let idx = ir_box.get_idx();
-                let r = self.lower_expr(&e, ir_box);
-                ir_box.instructments.push(IrInst::Store {
-                    var: d.name.clone(),
-                    src: r,
-                });
-                ir_box.advance_idx();
-                IrValue::Temp(Temp { idx: idx - 1 })
-            }
-            None => {
-                let idx = ir_box.get_idx();
-                // 没值的话，先存个默认值兜底
-                ir_box.instructments.push(IrInst::Store {
-                    var: d.name.clone(),
-                    src: IrValue::Const(0),
-                });
-                ir_box.advance_idx();
-                IrValue::Temp(Temp { idx: idx - 1 })
-            }
-        }
-    }
-
-    // let input = "let a = 4 * (-1 + 2 * 3);print a;";
-    fn lower_expr(&self, expr: &Expression, ir_box: &mut IrGen) -> IrValue {
-        match expr {
-            Expression::BinaryExpression(e) => self.lower_binary_expr(e, ir_box),
-            Expression::PrimaryExpression(e) => self.lower_primary_expr(e, ir_box),
-            Expression::UnaryExpression(e) => self.lower_unary_expr(e, ir_box),
-        }
-    }
-
-    fn lower_binary_expr(&self, expr: &BinaryExpression, ir_box: &mut IrGen) -> IrValue {
-        let left_value = self.lower_expr(&expr.left, ir_box);
-        let right_value = self.lower_expr(&expr.right, ir_box);
-        match (&left_value, &right_value) {
-            (IrValue::Const(l), IrValue::Const(r)) => match expr.operator {
-                BinaryOperator::Mul => {
-                    return IrValue::Const(l * r);
-                }
-                BinaryOperator::Div => {
-                    return IrValue::Const(l / r);
-                }
-                BinaryOperator::Plus => {
-                    return IrValue::Const(l + r);
-                }
-                BinaryOperator::Minus => {
-                    return IrValue::Const(l - r);
-                }
-            },
-            _ => {}
-        }
-        match expr.operator {
-            BinaryOperator::Mul => {
-                let idx = ir_box.get_idx();
-                ir_box.instructments.push(IrInst::Binary {
-                    dst: Temp { idx },
-                    op: IrOperator::Mul,
-                    lsh: left_value,
-                    rhs: right_value,
-                });
-                ir_box.advance_idx();
-                return IrValue::Temp(Temp { idx: idx - 1 });
-            }
-            BinaryOperator::Div => {
-                let idx = ir_box.get_idx();
-                ir_box.instructments.push(IrInst::Binary {
-                    dst: Temp { idx },
-                    op: IrOperator::Mul,
-                    lsh: left_value,
-                    rhs: right_value,
-                });
-                ir_box.advance_idx();
-                return IrValue::Temp(Temp { idx: idx - 1 });
-            }
-            BinaryOperator::Plus => {
-                let idx = ir_box.get_idx();
-                ir_box.instructments.push(IrInst::Binary {
-                    dst: Temp { idx },
-                    op: IrOperator::Mul,
-                    lsh: left_value,
-                    rhs: right_value,
-                });
-                ir_box.advance_idx();
-                return IrValue::Temp(Temp { idx: idx - 1 });
-            }
-            BinaryOperator::Minus => {
-                let idx = ir_box.get_idx();
-                ir_box.instructments.push(IrInst::Binary {
-                    dst: Temp { idx },
-                    op: IrOperator::Mul,
-                    lsh: left_value,
-                    rhs: right_value,
-                });
-                ir_box.advance_idx();
-                return IrValue::Temp(Temp { idx: idx - 1 });
-            }
-        }
-    }
-
-    fn lower_unary_expr(&self, expr: &UnaryExpression, ir_box: &mut IrGen) -> IrValue {
-        match &expr.prefix {
-            Some(op) => match op {
-                Minus => match self.lower_primary_expr(&expr.value, ir_box) {
-                    IrValue::Const(i) => IrValue::Const(-i),
-                    IrValue::Temp(t) => {
-                        let idx = ir_box.get_idx();
-                        ir_box.instructments.push(IrInst::Neg {
-                            dst: Temp { idx },
-                            src: IrValue::Temp(t),
-                        });
-                        ir_box.advance_idx();
-                        IrValue::Temp(Temp { idx: idx - 1 })
-                    }
-                },
-            },
-            _ => self.lower_primary_expr(&expr.value, ir_box),
-        }
-    }
-
-    //直接返回一个expr结果
-    fn lower_primary_expr(&self, expr: &PrimaryExpression, ir_box: &mut IrGen) -> IrValue {
-        match expr {
-            PrimaryExpression::IntegerLiteral(number) => {
-                return IrValue::Const(*number);
-            }
-            PrimaryExpression::Expression(e) => {
-                return self.lower_expr(&Box::new(e), ir_box);
-            }
-            PrimaryExpression::Identifier(i) => {
-                let idx = ir_box.get_idx();
-                ir_box.instructments.push(IrInst::Load {
-                    dst: Temp { idx },
-                    var: i.to_string(),
-                });
-                ir_box.advance_idx();
-                IrValue::Temp(Temp { idx: idx - 1 })
-            }
-        }
-    }
-}
+impl IrInst {}
 
 impl IrGen {
     fn advance_idx(&mut self) {
@@ -243,5 +97,116 @@ impl IrGen {
     }
     fn get_idx(&self) -> i64 {
         return self.idx;
+    }
+
+    fn new_temp(&mut self) -> IrValue {
+        self.advance_idx();
+        return IrValue::Temp(Temp { idx: self.idx - 1 });
+    }
+
+    pub fn lower_stmt(&mut self, stmt: &Statement) {
+        match stmt {
+            Statement::PrintStatement(e) => {
+                let res = self.lower_expr(&e);
+                self.instructments.push(IrInst::Print { src: res });
+            }
+            Statement::VariableDeclaration(d) => {
+                self.lower_var_declaration(d);
+            }
+        }
+    }
+    // let a = 1; let b;
+    fn lower_var_declaration(&mut self, d: &VariableDeclaration) {
+        match &d.initializer {
+            Some(e) => {
+                let r = self.lower_expr(&e);
+                self.instructments.push(IrInst::Store {
+                    var: d.name.clone(),
+                    src: r,
+                });
+            }
+            None => {
+                // 没值的话，先存个默认值兜底
+                self.instructments.push(IrInst::Store {
+                    var: d.name.clone(),
+                    src: IrValue::Const(0),
+                });
+            }
+        }
+    }
+
+    // let input = "let a = 4 * (-1 + 2 * 3);print a;";
+    fn lower_expr(&mut self, expr: &Expression) -> IrValue {
+        match expr {
+            Expression::BinaryExpression(e) => self.lower_binary_expr(e),
+            Expression::PrimaryExpression(e) => self.lower_primary_expr(e),
+            Expression::UnaryExpression(e) => self.lower_unary_expr(e),
+        }
+    }
+
+    fn lower_binary_expr(&mut self, expr: &BinaryExpression) -> IrValue {
+        let left_value = self.lower_expr(&expr.left);
+        let right_value = self.lower_expr(&expr.right);
+        if let (IrValue::Const(l), IrValue::Const(r)) = (&left_value, &right_value) {
+            return match expr.operator {
+                Mul => IrValue::Const(l * r),
+                Div => return IrValue::Const(l / r),
+                Plus => IrValue::Const(l + r),
+                BinaryOperator::Minus => IrValue::Const(l - r),
+            };
+        }
+        let op: IrOperator = match expr.operator {
+            Mul => IrOperator::Mul,
+            Div => IrOperator::Div,
+            Plus => IrOperator::Plus,
+            BinaryOperator::Minus => IrOperator::Sub,
+        };
+        let idx = self.get_idx();
+        self.instructments.push(IrInst::Binary {
+            dst: Temp { idx },
+            op,
+            lsh: left_value,
+            rhs: right_value,
+        });
+        self.new_temp()
+    }
+
+    fn lower_unary_expr(&mut self, expr: &UnaryExpression) -> IrValue {
+        match &expr.prefix {
+            Some(op) => match op {
+                Minus => match self.lower_primary_expr(&expr.value) {
+                    IrValue::Const(i) => IrValue::Const(-i),
+                    IrValue::Temp(t) => {
+                        let idx = self.get_idx();
+                        self.instructments.push(IrInst::Neg {
+                            dst: Temp { idx },
+                            src: IrValue::Temp(t),
+                        });
+                        self.new_temp()
+                    }
+                },
+            },
+            _ => self.lower_primary_expr(&expr.value),
+        }
+    }
+
+    //直接返回一个expr结果
+    fn lower_primary_expr(&mut self, expr: &PrimaryExpression) -> IrValue {
+        match expr {
+            PrimaryExpression::IntegerLiteral(number) => {
+                return IrValue::Const(*number);
+            }
+            PrimaryExpression::Expression(e) => {
+                return self.lower_expr(&Box::new(e));
+            }
+            PrimaryExpression::Identifier(i) => {
+                let idx = self.get_idx();
+                self.instructments.push(IrInst::Load {
+                    dst: Temp { idx },
+                    var: i.to_string(),
+                });
+                self.new_temp()
+            }
+        }
     }
 }
