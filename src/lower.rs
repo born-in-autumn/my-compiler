@@ -21,10 +21,10 @@ use BinaryOperator::*;
 // IR Module
 #[derive(Debug)]
 pub enum IrInst {
-    Const {
-        dst: Temp,
-        src: i64,
-    },
+    // Const {
+    //     dst: Temp,
+    //     src: i64,
+    // },
     Neg {
         dst: Temp,
         src: IrValue,

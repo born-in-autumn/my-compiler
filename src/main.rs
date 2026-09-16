@@ -58,9 +58,9 @@ fn main() {
 fn print_ir(instuctments: Vec<IrInst>) {
     for item in instuctments {
         match item {
-            IrInst::Const { dst, src } => {
-                println!("Const {:?} {:?}", dst.idx, src);
-            }
+            // IrInst::Const { dst, src } => {
+            //     println!("Const {:?} {:?}", dst.idx, src);
+            // }
             IrInst::Neg { dst, src } => {
                 println!("Neg {:?} {:?}", dst.idx, src);
             }

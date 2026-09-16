@@ -71,7 +71,7 @@ impl Interpreter {
         let right_value = self.eval_expr(&expr.right);
         let mut left = None;
         let mut right = None;
-
+        println!("{:?} {:?}", left,right);
         match left_value {
             Ok(Value::Integer(i)) => {
                 left = Some(i);
@@ -160,11 +160,6 @@ impl Interpreter {
                         }));
                     }
                 }
-            }
-            _ => {
-                return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
-                    message: format!("Undefined behavior4"),
-                }));
             }
         }
     }

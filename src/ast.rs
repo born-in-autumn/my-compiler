@@ -54,11 +54,11 @@ pub enum PrimaryExpression {
     Identifier(String),
     Expression(Box<Expression>)
 }
-#[derive(Debug, PartialEq, Clone)]
-pub enum Operator {
-    BinaryOperator(BinaryOperator),
-    UnaryOperator(UnaryOperator)
-}
+// #[derive(Debug, PartialEq, Clone)]
+// pub enum Operator {
+//     BinaryOperator(BinaryOperator),
+//     UnaryOperator(UnaryOperator)
+// }
 #[derive(Debug,PartialEq, Clone )]
 pub enum BinaryOperator {
     Mul,

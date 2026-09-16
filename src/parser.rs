@@ -1,5 +1,5 @@
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Expression, Operator, PrimaryExpression, Program, Statement, UnaryExpression, UnaryOperator, VariableDeclaration,
+    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Program, Statement, UnaryExpression, UnaryOperator, VariableDeclaration,
 };
 use crate::error::{CompilerError, UnexpectedToken};
 use crate::lexer::{Keyword::Let, Keyword::Print, Span, Token, TokenKind};
