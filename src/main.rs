@@ -4,14 +4,16 @@ mod interpreter;
 mod lexer;
 mod lower;
 mod parser;
+mod codegen_arm64;
 use std::collections::HashMap;
-
+use std::path::Path;
 use crate::interpreter::Interpreter;
 use lexer::Lexer;
 use lower::*;
 use parser::Parser;
+use codegen_arm64::GenArm64;
 fn main() {
-    let input = "let a = 4 * (-1 + 2 * 3);print a;";
+    let input = "let a = 2 * (9 + 2 * 9);print a;";
     let mut lexer = Lexer { input, position: 0 };
     // println!("lexer: {:?}", lexer);
 
@@ -45,8 +47,13 @@ fn main() {
                 }
                 Err(_e) => {}
             }
-            println!("The IR is: {:?}", ir_gen.instructments);
-            print_ir(ir_gen.instructments);
+            print_ir(&ir_gen.instructments);
+            let mut  codegen = GenArm64 {
+                offset_map: HashMap::new()
+            };
+            let lines = codegen.gen_arm64(ir_gen.instructments);
+            let path_new = Path::new("output").join("output.s");
+            codegen.write_arm64_code(&path_new, &lines).unwrap();
         }
         Err(e) => {
             eprintln!("{:?}", e);
@@ -55,7 +62,7 @@ fn main() {
 }
 
 
-fn print_ir(instuctments: Vec<IrInst>) {
+fn print_ir(instuctments: &Vec<IrInst>) {
     for item in instuctments {
         match item {
             // IrInst::Const { dst, src } => {

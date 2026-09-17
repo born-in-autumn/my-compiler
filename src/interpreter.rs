@@ -35,8 +35,6 @@ impl Interpreter {
             Statement::PrintStatement(e) => {
                 // TODO：需要取hashmap，晚点实现
                 let res = self.eval_expr(&e);
-                
-                println!("{:?}", res.unwrap());
             }
             Statement::VariableDeclaration(d) => {
                 self.execute_var_declaration(d);
@@ -71,7 +69,6 @@ impl Interpreter {
         let right_value = self.eval_expr(&expr.right);
         let mut left = None;
         let mut right = None;
-        println!("{:?} {:?}", left,right);
         match left_value {
             Ok(Value::Integer(i)) => {
                 left = Some(i);

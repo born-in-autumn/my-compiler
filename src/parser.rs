@@ -74,7 +74,6 @@ impl Parser {
         // 直接看第二次匹配是不是变量名字
         match self.current_token().kind {
             TokenKind::Identifier(s) => {
-                println!("{:?}", name);
                 name = s;
                 self.advance();
             }
