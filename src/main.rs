@@ -13,7 +13,9 @@ use lower::*;
 use parser::Parser;
 use codegen_arm64::GenArm64;
 fn main() {
-    let input = "let a = 2 * (9 + 2 * 9);print a;";
+    // TODO: let input = "let a = 1;let b = 2; leb c = a + b; print c"; 不报错
+    let input = "let a = 10;let b = -20; let c = -a+b; print c";
+
     let mut lexer = Lexer { input, position: 0 };
     // println!("lexer: {:?}", lexer);
 
