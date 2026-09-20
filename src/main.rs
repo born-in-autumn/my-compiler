@@ -91,6 +91,12 @@ fn print_ir(instuctments: &Vec<IrInst>) {
                 IrValue::Temp(t) => {
                     println!("Print t{:?}", t.idx);
                 }
+                IrValue::False => {
+                    println!("false");
+                }
+                IrValue::True => {
+                    println!("true");
+                }
             },
         }
     }

@@ -3,6 +3,8 @@
 
 // let a = 1;
 
+use crate::lexer::TokenKind;
+
 #[derive(Debug, PartialEq, Clone)]
 
 pub struct Program {
@@ -64,10 +66,41 @@ pub enum BinaryOperator {
     Mul,
     Div,
     Plus,
-    Minus 
+    Minus,
+    Equal,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+    NotEqual
 }
+
+impl From<TokenKind> for BinaryOperator {
+    fn from(tk: TokenKind) -> Self {
+        match tk {
+            TokenKind::Equal => BinaryOperator::Equal,
+            TokenKind::Greater => BinaryOperator::Greater,
+            TokenKind::Less => BinaryOperator::Less,
+            TokenKind::LessEqual => BinaryOperator::LessEqual,
+            TokenKind::GreaterEqual => BinaryOperator::GreaterEqual,
+            TokenKind::NotEqual => BinaryOperator::NotEqual,
+            TokenKind::Plus => BinaryOperator::Plus,
+            TokenKind::Minus => BinaryOperator::Minus,
+            TokenKind::Mul => BinaryOperator::Mul,
+            TokenKind::Div => BinaryOperator::Div,
+            _ => unreachable!("token {:?} 不是二元运算符", tk),
+        }
+    }
+}
+
+
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnaryOperator {
     Minus, // -
     // Not, // !
+}
+
+pub enum Type {
+
 }

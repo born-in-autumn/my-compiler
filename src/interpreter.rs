@@ -12,6 +12,8 @@ pub struct Interpreter {
 pub enum Value {
     Integer(i64),
     None,
+    True,
+    False,
 }
 
 /**
@@ -76,11 +78,16 @@ impl Interpreter {
             Ok(Value::None) => {
 
                 return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
-                    message: format!("Undefined behavior1"),
+                    message: format!("Undefined behavior"),
+                }));
+            }
+            // true or false
+            Ok(Value::False) | Ok(Value::True) => {
+                return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                    message: format!("Undefined behavior, not should bool type"),
                 }));
             }
             Err(e) => {
-
                 return Err(e);
             }
         }
@@ -95,8 +102,12 @@ impl Interpreter {
                     message: format!("Undefined behavior2"),
                 }));
             }
+            Ok(Value::False) | Ok(Value::True) => {
+                return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                    message: format!("Undefined behavior, not should bool type"),
+                }));
+            }
             Err(e) => {
-
                 return Err(e);
             }
         }
@@ -113,6 +124,11 @@ impl Interpreter {
             BinaryOperator::Minus => {
                 return Ok(Value::Integer(left.unwrap() - right.unwrap()));
             }
+            _ => {
+                return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                    message: format!("Undefined behavior, not should bool type"),
+                }));
+            }
         }
     }
 
@@ -124,7 +140,12 @@ impl Interpreter {
                     Ok(Value::Integer(i)) => Ok(Value::Integer(-i)),
                     Ok(Value::None) => {
                         return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
-                            message: format!("Undefined behavior3"),
+                            message: format!("Undefined behavior"),
+                        }));
+                    }
+                    Ok(Value::False) | Ok(Value::True) => {
+                        return Err(RunTimeError::UndefinedBehavior(UndefinedBehavior {
+                            message: format!("Undefined behavior, can not neg bool type"),
                         }));
                     }
                     Err(e) => {

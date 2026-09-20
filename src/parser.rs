@@ -1,5 +1,6 @@
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Program, Statement, UnaryExpression, UnaryOperator, VariableDeclaration,
+    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Program, Statement,
+    UnaryExpression, UnaryOperator, VariableDeclaration,
 };
 use crate::error::{CompilerError, UnexpectedToken};
 use crate::lexer::{Keyword::Let, Keyword::Print, Span, Token, TokenKind};
@@ -155,13 +156,41 @@ impl Parser {
     // 1 - (2 - 3)
     // let a = 4 * （-1 + 2 * 3）* 3 * (5+ 2)
     fn parse_expression(&mut self) -> Result<Expression, CompilerError> {
-        self.parse_add()
+        self.parse_bool()
+    }
+
+    fn parse_bool(&mut self) -> Result<Expression, CompilerError> {
+        // 这个的优先级要比add/sub还低,另外这里不支持链式比较，所以可以不需要loop
+        let mut left = self.parse_add();
+        match self.current_token().kind {
+            // 处理布尔值表达式
+            tk @ (TokenKind::Greater
+            | TokenKind::Less
+            | TokenKind::Equal
+            | TokenKind::GreaterEqual
+            | TokenKind::LessEqual
+            | TokenKind::NotEqual) => {
+                self.advance();
+                let result = self.parse_expression();
+                left = Ok(Expression::BinaryExpression(BinaryExpression {
+                    left: Box::new(left?),
+                    operator: tk.into(),
+                    right: Box::new(result?),
+                }))
+            }
+            _ => {
+                return left;
+            }
+        }
+
+        left
     }
 
     // + -
     fn parse_add(&mut self) -> Result<Expression, CompilerError> {
         let mut left = self.parse_mul();
         loop {
+            // match plus or sub
             match self.current_token().kind {
                 TokenKind::Plus => {
                     self.advance();

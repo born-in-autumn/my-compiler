@@ -16,6 +16,8 @@ use BinaryOperator::*;
  * Store var，src 把src的值存入变量var
  * Print src 输出src的值
  * Temp：一个临时的值，遵循静态单赋值（SSA）原则，只需要存储编号，实际的值在执行的时候算出来
+ * 
+ * 
  */
 
 // IR Module
@@ -57,6 +59,8 @@ pub struct Temp {
 pub enum IrValue {
     Const(i64),
     Temp(Temp),
+    True,
+    False
 }
 #[derive(Debug)]
 
@@ -65,6 +69,12 @@ pub enum IrOperator {
     Sub,
     Mul,
     Div,
+    Lt, // <
+    Le, // <=
+    Gt, //  >
+    Ge, // >=
+    Eq, // ==
+    Ne // !=
 }
 #[derive(Debug)]
 
@@ -107,7 +117,7 @@ impl IrGen {
     pub fn lower_stmt(&mut self, stmt: &Statement) {
         match stmt {
             Statement::PrintStatement(e) => {
-                let res = self.lower_expr(&e);
+                let res: IrValue = self.lower_expr(&e);
                 self.instructments.push(IrInst::Print { src: res });
             }
             Statement::VariableDeclaration(d) => {
@@ -150,8 +160,38 @@ impl IrGen {
         if let (IrValue::Const(l), IrValue::Const(r)) = (&left_value, &right_value) {
             return match expr.operator {
                 Mul => IrValue::Const(l * r),
-                Div => return IrValue::Const(l / r),
+                Div => IrValue::Const(l / r),
                 Plus => IrValue::Const(l + r),
+                Greater => if l > r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                GreaterEqual => if l >= r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                Less => if l < r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                LessEqual => if l <= r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                NotEqual => if l != r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                Equal => if l == r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
                 BinaryOperator::Minus => IrValue::Const(l - r),
             };
         }
@@ -159,6 +199,12 @@ impl IrGen {
             Mul => IrOperator::Mul,
             Div => IrOperator::Div,
             Plus => IrOperator::Plus,
+            Greater => IrOperator::Gt,
+            GreaterEqual => IrOperator::Ge,
+            Less => IrOperator::Lt,
+            LessEqual => IrOperator::Le,
+            NotEqual => IrOperator::Ne,
+            Equal => IrOperator::Eq,
             BinaryOperator::Minus => IrOperator::Sub,
         };
         let idx = self.get_idx();
@@ -184,6 +230,8 @@ impl IrGen {
                         });
                         self.new_temp()
                     }
+                    // 目前只有true和false，直接报错即可
+                    _ => unreachable!("IR Error, can not neg to bool type"),
                 },
             },
             _ => self.lower_primary_expr(&expr.value),

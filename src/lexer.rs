@@ -23,19 +23,24 @@ pub enum TokenKind {
     Keyword(Keyword),   // let keyword
     Identifier(String), // keyword
     Integer(i64),       // integer
-    // True,
-    // False,
-    Equal,     // ==
-    Assign,    // =
-    Semicolon, // ;
-    NOT,       // !
-    Plus,      // +
-    Minus,     // -
-    Mul,       // *
-    Div,       // /
-    EOF,       // end
-    LeftParen, // (
-    RightParen // )
+    True,         // true
+    False,        // false
+    Equal,        // ==
+    NotEqual,     // !=
+    Less,         // <
+    Greater,      // >
+    LessEqual,    // <=
+    GreaterEqual, // >=
+    Assign,       // =
+    Semicolon,    // ;
+    NOT,          // !
+    Plus,         // +
+    Minus,        // -
+    Mul,          // *
+    Div,          // /
+    EOF,          // end
+    LeftParen,    // (
+    RightParen,   // )
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -44,7 +49,7 @@ pub enum Keyword {
     For,
     While,
     Break,
-    Print
+    Print,
 }
 impl<'a> Lexer<'a> {
     // now
@@ -86,12 +91,12 @@ impl<'a> Lexer<'a> {
                 },
                 kind: TokenKind::Keyword(Let),
             },
-            "print" => Token{
+            "print" => Token {
                 span: Span {
                     start: self.position - len,
-                    end: self.position
+                    end: self.position,
                 },
-                kind: TokenKind::Keyword(Print)
+                kind: TokenKind::Keyword(Print),
             },
             "for" => Token {
                 span: Span {
@@ -113,6 +118,14 @@ impl<'a> Lexer<'a> {
                     end: self.position,
                 },
                 kind: TokenKind::Keyword(While),
+            },
+            "true" => Token {
+                span: Span { start: self.position - 4, end: self.position },
+                kind: TokenKind::True
+            },
+            "false" => Token {
+                span: Span { start: self.position - 5, end: self.position },
+                kind: TokenKind::False
             },
             _ => Token {
                 span: Span {
@@ -195,34 +208,47 @@ impl<'a> Lexer<'a> {
                     kind: TokenKind::Div,
                 })
             }
-            Some('!') => {
+            Some('!') => match self.peek() {
+                Some('=') => {
+                    self.advance();
+                    self.advance();
+                    Ok(Token {
+                        span: Span {
+                            start: self.position - 2,
+                            end: self.position,
+                        },
+                        kind: TokenKind::NotEqual,
+                    })
+                }
+                _ => {
+                    self.advance();
+                    Ok(Token {
+                        span: Span {
+                            start: self.position - 1,
+                            end: self.position,
+                        },
+                        kind: TokenKind::NOT,
+                    })
+                }
+            },
+            Some('(') => {
                 self.advance();
                 Ok(Token {
                     span: Span {
                         start: self.position - 1,
                         end: self.position,
                     },
-                    kind: TokenKind::NOT,
-                })
-            }
-            Some('(') => {
-                self.advance();
-                Ok(Token {
-                    span: Span {
-                        start: self.position -1 ,
-                        end: self.position
-                    },
-                    kind: TokenKind::LeftParen
+                    kind: TokenKind::LeftParen,
                 })
             }
             Some(')') => {
                 self.advance();
                 Ok(Token {
                     span: Span {
-                        start: self.position -1 ,
-                        end: self.position
+                        start: self.position - 1,
+                        end: self.position,
                     },
-                    kind: TokenKind::RightParen
+                    kind: TokenKind::RightParen,
                 })
             }
             Some(';') => {
@@ -255,6 +281,52 @@ impl<'a> Lexer<'a> {
                             end: self.position,
                         },
                         kind: TokenKind::Assign,
+                    })
+                }
+            },
+            Some('>') => match self.peek() {
+                Some('=') => {
+                    self.advance();
+                    self.advance();
+                    Ok(Token {
+                        kind: TokenKind::GreaterEqual,
+                        span: Span {
+                            start: self.position - 2,
+                            end: self.position,
+                        },
+                    })
+                }
+                _ => {
+                    self.advance();
+                    Ok(Token {
+                        kind: TokenKind::Greater,
+                        span: Span {
+                            start: self.position - 1,
+                            end: self.position,
+                        },
+                    })
+                }
+            },
+            Some('<') => match self.peek() {
+                Some('=') => {
+                    self.advance();
+                    self.advance();
+                    Ok(Token {
+                        kind: TokenKind::LessEqual,
+                        span: Span {
+                            start: self.position - 2,
+                            end: self.position,
+                        },
+                    })
+                }
+                _ => {
+                    self.advance();
+                    Ok(Token {
+                        kind: TokenKind::Less,
+                        span: Span {
+                            start: self.position - 1,
+                            end: self.position,
+                        },
                     })
                 }
             },

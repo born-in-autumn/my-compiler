@@ -13,6 +13,7 @@ impl GenArm64 {
         let mut result: Vec<String> = Vec::new();
         let mut idx = 1; // 记录下当前偏移了几个变量的字节
         let mut has_print = false;
+        let mut string_printer = vec![];
         // 先生成prologue
         let count = self.gen_prologue(&mut result, &ir, &mut has_print);
         // let has_print = false;
@@ -58,6 +59,8 @@ impl GenArm64 {
                             // idx + 1
                             idx += 1;
                         }
+                        IrValue::True => {}
+                        IrValue::False => {}
                     }
                 }
                 IrInst::Binary { dst, op, lsh, rhs } => {
@@ -72,6 +75,9 @@ impl GenArm64 {
                             IrOperator::Mul => "mul x1,x1,x2",
                             IrOperator::Sub => "sub x1,x1,x2",
                             IrOperator::Div => "div x1,x1,x2",
+                            IrOperator::Eq => {
+                                
+                            }
                         };
                         let offset_left = self.offset_map.get(&left_key).unwrap();
                         let offset_right = self.offset_map.get(&right_key).unwrap();
@@ -100,7 +106,6 @@ impl GenArm64 {
                     match src {
                         IrValue::Const(_c) => {
                             // 理论上说立即数在其他阶段就被消除了
-                            
                         }
                         IrValue::Temp(t) => {
                             // 如果是temp，先拿到位置
@@ -118,6 +123,8 @@ impl GenArm64 {
                             self.offset_map.insert(new_key, idx * 16);
                             idx += 1;
                         }
+                        IrValue::False => {}
+                        IrValue::True => {}
                     }
                 }
 
@@ -144,12 +151,25 @@ impl GenArm64 {
                         result.push("add    x0, x0, Lfmt@PAGEOFF".to_string());
                         result.push("bl     _printf".to_string());
                     }
+                    // 直接打印
+                    IrValue::False => {
+                        result.push("adrp   x0, Lfmt@PAGE".to_string());
+                        result.push("add    x0, x0, Lfmt@PAGEOFF".to_string());
+                        result.push("bl     _printf".to_string());
+                        string_printer.push("false".to_string());
+                    }
+                    IrValue::True => {
+                        result.push("adrp   x0, Lfmt@PAGE".to_string());
+                        result.push("add    x0, x0, Lfmt@PAGEOFF".to_string());
+                        result.push("bl     _printf".to_string());
+                        string_printer.push("true".to_string());
+                    }
                 },
             }
         }
 
         // 流程走完之后，生成epilogue
-        self.gen_epilogue(&mut result, count, &has_print);
+        self.gen_epilogue(&mut result, count, &has_print, &string_printer);
 
         result
     }
@@ -167,25 +187,25 @@ impl GenArm64 {
         // 先全扫一遍
         for code in ir {
             match code {
-                IrInst::Load { dst:_, var:_ } => {
+                IrInst::Load { dst: _, var: _ } => {
                     count += 1;
                 }
 
-                IrInst::Store { var:_, src:_ } => {
+                IrInst::Store { var: _, src: _ } => {
                     count += 1;
                 }
-                IrInst::Print { src } => match src {
-                    IrValue::Const(_i) => {
-                        *has_print = true;
-                    }
-                    IrValue::Temp(_t) => {
-                        *has_print = true;
-                    }
-                },
-                IrInst::Binary { dst:_, op:_, lsh:_, rhs:_ } => {
+                IrInst::Print { src: _ } => {
+                    *has_print = true;
+                }
+                IrInst::Binary {
+                    dst: _,
+                    op: _,
+                    lsh: _,
+                    rhs: _,
+                } => {
                     count += 1;
                 }
-                IrInst::Neg { dst:_, src:_ } => {
+                IrInst::Neg { dst: _, src: _ } => {
                     count += 1;
                 }
             }
@@ -201,7 +221,7 @@ impl GenArm64 {
         count
     }
 
-    fn gen_epilogue(&self, result: &mut Vec<String>, count: i64, has_print: &bool) {
+    fn gen_epilogue(&self, result: &mut Vec<String>, count: i64, has_print: &bool, string_printer:&Vec<String>) {
         // 在这里要开始复原那些东西了
         // 先还第一部分，count欠的那部分
         result.push(format!("add sp, sp, #{}", (count + 1) * 16));
@@ -220,6 +240,10 @@ impl GenArm64 {
         result.push("Lfmt:".to_string());
         let s = ".asciz \"%lld\\n\"";
         result.push(s.to_string());
+        for s in string_printer {
+            result.push("Lfmt:".to_string());
+            result.push(format!(".asciz {}", s));
+        }
     }
     pub fn write_arm64_code(&self, path: &Path, lines: &[String]) -> std::io::Result<()> {
         let file = File::create(path)?;
