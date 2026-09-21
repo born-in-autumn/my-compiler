@@ -1,3 +1,5 @@
+use crate::lower::ArithOp::{Div, Mul, Plus, Sub};
+use crate::lower::CmpOp::{Eq, Ge, Gt, Le, Lt, Ne};
 use crate::lower::{IrInst, IrOperator, IrValue};
 use std::collections::HashMap;
 use std::fs::File;
@@ -48,6 +50,7 @@ impl GenArm64 {
                         IrValue::Temp(t) => {
                             // 先拿到要操作的Temp
                             let key = format!("t{}", t.idx);
+                            // println!("the key is: {:?}", key);
                             let offset = self.offset_map.get(&key).unwrap();
                             // 扔进x1
                             result.push(format!("ldr x1, [sp, #{}]", offset));
@@ -65,39 +68,66 @@ impl GenArm64 {
                 }
                 IrInst::Binary { dst, op, lsh, rhs } => {
                     //这里理论上应该不可能存在两个操作数都是立即数的情况，否则在前面就能算出c是个立即数了
-
                     if let (IrValue::Temp(tl), IrValue::Temp(tr)) = (lsh, rhs) {
                         // 先把要操作的数，拿到x1、x2上，然后计算
                         let left_key = format!("t{}", tl.idx);
                         let right_key = format!("t{}", tr.idx);
-                        let ir_op: &str = match op {
-                            IrOperator::Plus => "add x1,x1,x2",
-                            IrOperator::Mul => "mul x1,x1,x2",
-                            IrOperator::Sub => "sub x1,x1,x2",
-                            IrOperator::Div => "div x1,x1,x2",
-                            IrOperator::Eq => {
-                                
+                        match op {
+                            IrOperator::ArithOp(arith_op) => {
+                                let ir_op: &str = match arith_op {
+                                    Plus => "add x1,x1,x2",
+                                    Mul => "mul x1,x1,x2",
+                                    Sub => "sub x1,x1,x2",
+                                    Div => "div x1,x1,x2",
+                                };
+
+                                let offset_left = self.offset_map.get(&left_key).unwrap();
+                                let offset_right = self.offset_map.get(&right_key).unwrap();
+                                // 扔进x1、x2
+
+                                result.push(format!("ldr x1, [sp, #{}]", offset_left));
+
+                                result.push(format!("ldr x2, [sp, #{}]", offset_right));
+                                // 相加,存到x1
+                                result.push(ir_op.to_string());
+
+                                // 扔到栈上
+                                let start = idx * 16;
+                                result.push(format!("str x1, [sp, #{}]", start));
+
+                                // 存到hashmap
+                                let new_key = format!("t{}", dst.idx);
+                                self.offset_map.insert(new_key, idx * 16);
+
+                                // idx+1
+                                idx += 1;
                             }
-                        };
-                        let offset_left = self.offset_map.get(&left_key).unwrap();
-                        let offset_right = self.offset_map.get(&right_key).unwrap();
-                        // 扔进x1、x2
-                        result.push(format!("ldr x1, [sp, #{}]", offset_left));
+                            // 这里处理比较运算符
+                            IrOperator::CmpOp(cmp_op) => {
+                                let ir_op: &str = match cmp_op {
+                                    Ge => "cset x1, ge",
+                                    Gt => "cset x1, gt",
+                                    Le => "cset x1, le",
+                                    Lt => "cset x1, lt",
+                                    Eq => "cset x1, eq",
+                                    Ne => "cset x1, ne",
+                                };
 
-                        result.push(format!("ldr x2, [sp, #{}]", offset_right));
-                        // 相加,存到x1
-                        result.push(ir_op.to_string());
+                                // 扔进去算一个结果
+                                result.push("cmp x1, x2".to_string());
+                                // 存一下
+                                result.push(ir_op.to_string());
+                                let start = idx * 16;
+                                result.push(format!("str x1, [sp, #{}]", start));
+                                // 存到hashmap
+                                let new_key = format!("t{}", dst.idx);
 
-                        // 扔到栈上
-                        let start = idx * 16;
-                        result.push(format!("str x1, [sp, #{}]", start));
-
-                        // 存到hashmap
-                        let new_key = format!("t{}", dst.idx);
-                        self.offset_map.insert(new_key, idx * 16);
-
-                        // idx+1
-                        idx += 1;
+                                println!("the new key is: {:?}", new_key);
+                                self.offset_map.insert(new_key, idx * 16);
+                                // idx+1
+                                idx += 1;
+                            }
+                        }
                     }
                     // TODO: binary没有处理完所有的情况
                 }
@@ -221,7 +251,13 @@ impl GenArm64 {
         count
     }
 
-    fn gen_epilogue(&self, result: &mut Vec<String>, count: i64, has_print: &bool, string_printer:&Vec<String>) {
+    fn gen_epilogue(
+        &self,
+        result: &mut Vec<String>,
+        count: i64,
+        has_print: &bool,
+        string_printer: &Vec<String>,
+    ) {
         // 在这里要开始复原那些东西了
         // 先还第一部分，count欠的那部分
         result.push(format!("add sp, sp, #{}", (count + 1) * 16));

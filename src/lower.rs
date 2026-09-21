@@ -65,10 +65,20 @@ pub enum IrValue {
 #[derive(Debug)]
 
 pub enum IrOperator {
+    ArithOp(ArithOp),
+    CmpOp(CmpOp)
+}
+#[derive(Debug)]
+
+pub enum ArithOp {
     Plus,
     Sub,
     Mul,
     Div,
+}
+#[derive(Debug)]
+
+pub enum CmpOp {
     Lt, // <
     Le, // <=
     Gt, //  >
@@ -196,16 +206,16 @@ impl IrGen {
             };
         }
         let op: IrOperator = match expr.operator {
-            Mul => IrOperator::Mul,
-            Div => IrOperator::Div,
-            Plus => IrOperator::Plus,
-            Greater => IrOperator::Gt,
-            GreaterEqual => IrOperator::Ge,
-            Less => IrOperator::Lt,
-            LessEqual => IrOperator::Le,
-            NotEqual => IrOperator::Ne,
-            Equal => IrOperator::Eq,
-            BinaryOperator::Minus => IrOperator::Sub,
+            Mul => IrOperator::ArithOp(ArithOp::Mul),
+            Div => IrOperator::ArithOp(ArithOp::Div),
+            Plus => IrOperator::ArithOp(ArithOp::Plus),
+            Greater => IrOperator::CmpOp(CmpOp::Gt),
+            GreaterEqual => IrOperator::CmpOp(CmpOp::Ge),
+            Less => IrOperator::CmpOp(CmpOp::Lt),
+            LessEqual => IrOperator::CmpOp(CmpOp::Le),
+            NotEqual => IrOperator::CmpOp(CmpOp::Ne),
+            Equal => IrOperator::CmpOp(CmpOp::Eq),
+            BinaryOperator::Minus => IrOperator::ArithOp(ArithOp::Sub),
         };
         let idx = self.get_idx();
         self.instructments.push(IrInst::Binary {

@@ -7,14 +7,16 @@ mod parser;
 mod codegen_arm64;
 use std::collections::HashMap;
 use std::path::Path;
-use crate::interpreter::Interpreter;
+// use crate::interpreter::Interpreter;
 use lexer::Lexer;
 use lower::*;
 use parser::Parser;
 use codegen_arm64::GenArm64;
 fn main() {
     // TODO: let input = "let a = 1;let b = 2; leb c = a + b; print c"; 不报错
-    let input = "let a = 10;let b = -20; let c = -a+b; print c";
+    // let input = "let a = 10;let b = 50; let c = -a+b; print c";
+    let input = "let a = 1; let b = 2; let c = a < b; print c"; 
+
 
     let mut lexer = Lexer { input, position: 0 };
     // println!("lexer: {:?}", lexer);
@@ -32,9 +34,9 @@ fn main() {
             };
             let program = p.parse_program();
             println!("{:?}", program);
-            let mut interpreter = Interpreter {
-                env: HashMap::new(),
-            };
+            // let mut interpreter = Interpreter {
+            //     env: HashMap::new(),
+            // };
 
             let mut ir_gen = IrGen {
                 instructments: vec![],
@@ -43,7 +45,7 @@ fn main() {
             match program {
                 Ok(ast) => {
                     for i in ast.statements {
-                        interpreter.execute_stmt(&i);
+                        // interpreter.execute_stmt(&i);
                         ir_gen.lower_stmt(&i);
                     }
                 }
