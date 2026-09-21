@@ -1,5 +1,5 @@
 use crate::error::{CompilerError, UnexpectedCharacter};
-use crate::lexer::Keyword::{Break, For, Let, Print, While};
+use crate::lexer::Keyword::{Break, For, Let, Print, While, If, Else };
 #[derive(Debug)]
 pub struct Lexer<'a> {
     pub position: usize,
@@ -50,6 +50,8 @@ pub enum Keyword {
     While,
     Break,
     Print,
+    If,
+    Else
 }
 impl<'a> Lexer<'a> {
     // now
@@ -126,6 +128,14 @@ impl<'a> Lexer<'a> {
             "false" => Token {
                 span: Span { start: self.position - 5, end: self.position },
                 kind: TokenKind::False
+            },
+            "if" => Token {
+                span: Span { start: self.position - 2, end: self.position },
+                kind: TokenKind::Keyword(If)
+            },
+            "else" => Token {
+                span: Span { start: self.position - 4, end: self.position },
+                kind: TokenKind::Keyword(Else)
             },
             _ => Token {
                 span: Span {

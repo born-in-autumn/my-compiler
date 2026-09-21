@@ -15,9 +15,7 @@ use codegen_arm64::GenArm64;
 fn main() {
     // TODO: let input = "let a = 1;let b = 2; leb c = a + b; print c"; 不报错
     // let input = "let a = 10;let b = 50; let c = -a+b; print c";
-    let input = "let a = 1; let b = 2; let c = a < b; print c"; 
-
-
+    let input = "let a = 1; let b = 2; let c = a > b; print c"; 
     let mut lexer = Lexer { input, position: 0 };
     // println!("lexer: {:?}", lexer);
 
