@@ -1,3 +1,4 @@
+use crate::ast::IfStatement;
 use crate::ast::{
     BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Statement, UnaryExpression,
     UnaryOperator::Minus, VariableDeclaration,
@@ -41,9 +42,14 @@ impl Interpreter {
             Statement::VariableDeclaration(d) => {
                 self.execute_var_declaration(d);
             }
+            Statement::IfStatement(s) => {
+                self.execute_if_stmt(s);
+            }
         }
     }
-
+    fn execute_if_stmt(&mut self, s: &IfStatement) {
+        
+    }
     fn execute_var_declaration(&mut self, d: &VariableDeclaration) {
         // 标识符是hashmap的Key，先判断initializer是否有值，如果没值，直接把None存到hashmap里
         match &d.initializer {

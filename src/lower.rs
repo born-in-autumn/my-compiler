@@ -1,6 +1,5 @@
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Statement, UnaryExpression,
-    UnaryOperator::Minus, VariableDeclaration,
+    BinaryExpression, BinaryOperator, Expression, IfStatement, PrimaryExpression, Statement, UnaryExpression, UnaryOperator::Minus, VariableDeclaration,
 };
 use BinaryOperator::*;
 
@@ -133,8 +132,16 @@ impl IrGen {
             Statement::VariableDeclaration(d) => {
                 self.lower_var_declaration(d);
             }
+            Statement::IfStatement(s) => {
+                self.lower_if_statement(s);
+            }
         }
     }
+
+    fn lower_if_statement(&mut self, s: &IfStatement) {
+
+    }
+
     // let a = 1; let b;
     fn lower_var_declaration(&mut self, d: &VariableDeclaration) {
         match &d.initializer {

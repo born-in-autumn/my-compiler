@@ -142,6 +142,20 @@ Program = VariableDeclaration*，一个程序，可以由许多变量声明组�
 1. 需要数字或者变量名
 2. 如果支持括号，则括号内可以是一个完整的表达式
 
+### IF Statement
+1. if关键字 + Expression + {  + Vec<Statement> +  } + Option(Else Statement)
+2. IR上直接cmp + b.cond
+### Else Statement
+1. else关键字 + { + Vec<Statement>  + }
+<!--
+例如
+let b = 2;
+let a = 1;
+if a > 1 {
+    print b;
+}
+-->
+
 
 
 NOTE：

@@ -15,9 +15,18 @@ pub struct Program {
 
 pub enum Statement {
     VariableDeclaration(VariableDeclaration),
-    PrintStatement(Expression)
+    PrintStatement(Expression),
+    IfStatement(IfStatement)
 }
 
+
+#[derive(Debug,PartialEq, Clone )]
+
+pub struct IfStatement {
+    pub cond: Expression,
+    pub if_body: Vec<Statement>,
+    pub else_body: Option<Vec<Statement>>
+}
 
 // pub enum Declaration {
 //     VariableDeclaration(VariableDeclaration) // 目前只做变量声明

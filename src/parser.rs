@@ -1,8 +1,8 @@
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Program, Statement,
-    UnaryExpression, UnaryOperator, VariableDeclaration,
+    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Program, Statement, UnaryExpression, UnaryOperator, VariableDeclaration, IfStatement
 };
 use crate::error::{CompilerError, UnexpectedToken};
+use crate::lexer::Keyword::{Else, If};
 use crate::lexer::{Keyword::Let, Keyword::Print, Span, Token, TokenKind};
 #[derive(Debug)]
 pub struct Parser {
@@ -23,6 +23,9 @@ impl Parser {
                 }
                 TokenKind::Keyword(Print) => {
                     statements.push(Statement::PrintStatement(self.parse_print_statement()?))
+                }
+                TokenKind::Keyword(If) => {
+                    statements.push(Statement::IfStatement(self.parse_if_statement()?))
                 }
                 _ => {
                     self.advance();
@@ -48,6 +51,140 @@ impl Parser {
             }
         }
     }
+
+    fn parse_if_statement(&mut self) -> Result<IfStatement, CompilerError> {
+        match self.current_token().kind {
+            TokenKind::Keyword(If) => {
+                self.advance();
+            }
+            _ => {
+                unreachable!("unreachable match arms");
+            }
+        }
+        // 看是不是表达式
+        let cond = self.parse_expression()?;
+        // 左括号
+        match self.current_token().kind {
+            TokenKind::LeftBrace => {
+                self.advance();
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token, eppect left brace in statement "),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 1,
+                    },
+                }));
+            }
+        }
+        // 一堆语句,循环去解析
+        let mut if_body: Vec<Statement> = Vec::new();
+        let mut else_body: Option<Vec<Statement>> = None;
+        loop {
+            match self.current_token().kind {
+                TokenKind::Keyword(Let) => {
+                    if_body.push(Statement::VariableDeclaration(
+                        self.parse_variable_declaration()?,
+                    ));
+                }
+                TokenKind::Keyword(If) => {
+                    if_body.push(Statement::IfStatement(self.parse_if_statement()?));
+                }
+                TokenKind::Keyword(Print) => {
+                    if_body.push(Statement::PrintStatement(self.parse_print_statement()?));
+                }
+                TokenKind::RightBrace => {
+                    self.advance();
+                    break;
+                }
+                _ => {
+                    return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                        message: format!("unexpected token, expect right brace in statement"),
+                        span: Span {
+                            start: self.position,
+                            end: self.position + 1,
+                        },
+                    }));
+                }
+            }
+        }
+
+        // 再看下有没有else，因为一个else一定要搭配一个if，所以语义上基本可以认为else是if的变体
+        match self.current_token().kind {
+            TokenKind::Keyword(Else) => {
+                // 去解析
+                self.parse_else_statement(&mut else_body)?;
+            }
+            _ => {
+                // 如果没有else，那就没事了，啥都不用做
+            }
+        }
+        // Ok(VariableDeclaration { name, initializer })
+        Ok(IfStatement {
+            cond,
+            if_body,
+            else_body
+        })
+    }
+
+    fn parse_else_statement(&mut self, else_body: &mut Option<Vec<Statement>>) -> Result<(), CompilerError> {
+        match self.current_token().kind {
+            TokenKind::Keyword(Else) => {
+                self.advance();
+            }
+            _ => {
+                unreachable!("unreachable match arms");
+            }
+        }
+        // 左括号
+        match self.current_token().kind {
+            TokenKind::LeftBrace => {
+                self.advance();
+            }
+            _ => {
+                return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                    message: format!("unexpected token, eppect left brace in statement "),
+                    span: Span {
+                        start: self.position,
+                        end: self.position + 1,
+                    },
+                }));
+            }
+        }
+
+        loop {
+            match self.current_token().kind {
+                TokenKind::Keyword(Let) => {
+                    // unwrap 会拿走所有权
+                    else_body.as_mut().unwrap().push(Statement::VariableDeclaration(
+                        self.parse_variable_declaration()?,
+                    ));
+                }
+                TokenKind::Keyword(If) => {
+                    else_body.as_mut().unwrap().push(Statement::IfStatement(self.parse_if_statement()?));
+                }
+                TokenKind::Keyword(Print) => {
+                    else_body.as_mut().unwrap().push(Statement::PrintStatement(self.parse_print_statement()?));
+                }
+                TokenKind::RightBrace => {
+                    self.advance();
+                    break;
+                }
+                _ => {
+                    return Err(CompilerError::UnexpectedToken(UnexpectedToken {
+                        message: format!("unexpected token, expect right brace in statement"),
+                        span: Span {
+                            start: self.position,
+                            end: self.position + 1,
+                        },
+                    }));
+                }
+            }
+        }
+        Ok(())
+    }
+
     /**
      *   expect: [ Keyword(Let),  Identifier("a"),  Assign,
      *   Identifier("1"), Semicolon]
