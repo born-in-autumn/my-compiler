@@ -1,5 +1,6 @@
 use crate::ast::{
-    BinaryExpression, BinaryOperator, Expression, PrimaryExpression, Program, Statement, UnaryExpression, UnaryOperator, VariableDeclaration, IfStatement
+    BinaryExpression, BinaryOperator, Expression, IfStatement, PrimaryExpression, Program,
+    Statement, UnaryExpression, UnaryOperator, VariableDeclaration,
 };
 use crate::error::{CompilerError, UnexpectedToken};
 use crate::lexer::Keyword::{Else, If};
@@ -35,21 +36,33 @@ impl Parser {
         Ok(Program { statements })
     }
     fn parse_print_statement(&mut self) -> Result<Expression, CompilerError> {
+        let expr;
         match self.current_token().kind {
             TokenKind::Keyword(Print) => {
                 self.advance();
-                self.parse_expression()
+                expr = self.parse_expression()?;
+            }
+            _ => {
+                unreachable!("unreachable match arms");
+            }
+        }
+
+        // 分号消耗下
+        match self.current_token().kind {
+            TokenKind::Semicolon => {
+                self.advance();
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token"),
+                    message: format!("unexpected token, expect ; but found {:?}", self.current_token().kind),
                     span: Span {
                         start: self.position,
-                        end: self.position + 3,
+                        end: self.position + 1,
                     },
                 }));
             }
         }
+        Ok(expr)
     }
 
     fn parse_if_statement(&mut self) -> Result<IfStatement, CompilerError> {
@@ -70,7 +83,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token, eppect left brace in statement "),
+                    message: format!("unexpected token, expect left brace in statement1 "),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -124,11 +137,14 @@ impl Parser {
         Ok(IfStatement {
             cond,
             if_body,
-            else_body
+            else_body,
         })
     }
 
-    fn parse_else_statement(&mut self, else_body: &mut Option<Vec<Statement>>) -> Result<(), CompilerError> {
+    fn parse_else_statement(
+        &mut self,
+        else_body: &mut Option<Vec<Statement>>,
+    ) -> Result<(), CompilerError> {
         match self.current_token().kind {
             TokenKind::Keyword(Else) => {
                 self.advance();
@@ -144,7 +160,7 @@ impl Parser {
             }
             _ => {
                 return Err(CompilerError::UnexpectedToken(UnexpectedToken {
-                    message: format!("unexpected token, eppect left brace in statement "),
+                    message: format!("unexpected token, expect left brace in statement "),
                     span: Span {
                         start: self.position,
                         end: self.position + 1,
@@ -157,15 +173,21 @@ impl Parser {
             match self.current_token().kind {
                 TokenKind::Keyword(Let) => {
                     // unwrap 会拿走所有权
-                    else_body.as_mut().unwrap().push(Statement::VariableDeclaration(
-                        self.parse_variable_declaration()?,
-                    ));
+                    else_body
+                        .get_or_insert_with(Vec::new)
+                        .push(Statement::VariableDeclaration(
+                            self.parse_variable_declaration()?,
+                        ));
                 }
                 TokenKind::Keyword(If) => {
-                    else_body.as_mut().unwrap().push(Statement::IfStatement(self.parse_if_statement()?));
+                    else_body
+                        .get_or_insert_with(Vec::new)
+                        .push(Statement::IfStatement(self.parse_if_statement()?));
                 }
                 TokenKind::Keyword(Print) => {
-                    else_body.as_mut().unwrap().push(Statement::PrintStatement(self.parse_print_statement()?));
+                    else_body
+                        .get_or_insert_with(Vec::new)
+                        .push(Statement::PrintStatement(self.parse_print_statement()?));
                 }
                 TokenKind::RightBrace => {
                     self.advance();
