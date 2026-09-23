@@ -5,7 +5,7 @@ use BinaryOperator::*;
 
 /**
  *
- * 需要定义一种中间表示，把AST拍平，未来方便编译器后端直接转成x86-64汇编，IR不涉及任何寄存器相关的操作
+ * 需要定义一种中间表示，把AST拍平，未来方便编译器后端直接转成ARM64汇编，IR不涉及任何寄存器相关的操作
  * 我们会采用TAC（三地址码）的核心思想来完成
  * 目前暂定如下：
  * Const dst， src  把整数常量src的值加载到dst
@@ -14,6 +14,7 @@ use BinaryOperator::*;
  * Load dst，var  把变量var读取值到dst
  * Store var，src 把src的值存入变量var
  * Print src 输出src的值
+ * Label dst 给接下来的代码命名
  * Temp：一个临时的值，遵循静态单赋值（SSA）原则，只需要存储编号，实际的值在执行的时候算出来
  * 
  * 
@@ -126,7 +127,7 @@ impl IrGen {
     pub fn lower_stmt(&mut self, stmt: &Statement) {
         match stmt {
             Statement::PrintStatement(e) => {
-                let res: IrValue = self.lower_expr(&e);
+                let res: IrValue = self.lower_expr(&e, String::from(""));
                 self.instructments.push(IrInst::Print { src: res });
             }
             Statement::VariableDeclaration(d) => {
@@ -137,16 +138,22 @@ impl IrGen {
             }
         }
     }
-
-    fn lower_if_statement(&mut self, s: &IfStatement) {
-
+    /**
+     * 
+     * 分析下现状
+     * if三步走：设置label，跳转，把这些翻译成ir，然后让后续流程去处理
+     * 
+     * 
+     */
+    fn lower_if_statement(&mut self, stmt: &IfStatement) {
+        self.lower_expr(&stmt.cond, String::from("label"));
     }
 
     // let a = 1; let b;
     fn lower_var_declaration(&mut self, d: &VariableDeclaration) {
         match &d.initializer {
             Some(e) => {
-                let r = self.lower_expr(&e);
+                let r = self.lower_expr(&e, String::from(""));
                 self.instructments.push(IrInst::Store {
                     var: d.name.clone(),
                     src: r,
@@ -163,17 +170,21 @@ impl IrGen {
     }
 
     // let input = "let a = 4 * (-1 + 2 * 3);print a;";
-    fn lower_expr(&mut self, expr: &Expression) -> IrValue {
+    fn lower_expr(&mut self, expr: &Expression, label: String) -> IrValue {
         match expr {
-            Expression::BinaryExpression(e) => self.lower_binary_expr(e),
+            Expression::BinaryExpression(e) => if label == "" {
+                return self.lower_binary_expr(e);
+            }else {
+                return self.lower_binary_expr_in_if_stmt(e);
+            }
             Expression::PrimaryExpression(e) => self.lower_primary_expr(e),
             Expression::UnaryExpression(e) => self.lower_unary_expr(e),
         }
     }
-
+    
     fn lower_binary_expr(&mut self, expr: &BinaryExpression) -> IrValue {
-        let left_value = self.lower_expr(&expr.left);
-        let right_value = self.lower_expr(&expr.right);
+        let left_value = self.lower_expr(&expr.left, String::from(""));
+        let right_value = self.lower_expr(&expr.right, String::from(""));
         if let (IrValue::Const(l), IrValue::Const(r)) = (&left_value, &right_value) {
             return match expr.operator {
                 Mul => IrValue::Const(l * r),
@@ -234,6 +245,73 @@ impl IrGen {
         self.new_temp()
     }
 
+
+
+    // 目前是专门给if条件用的函数，未来可能会改名
+    fn lower_binary_expr_in_if_stmt(&mut self, expr: &BinaryExpression) -> IrValue {
+        let left_value = self.lower_expr(&expr.left, String::from(""));
+        let right_value = self.lower_expr(&expr.right, String::from(""));
+        if let (IrValue::Const(l), IrValue::Const(r)) = (&left_value, &right_value) {
+            return match expr.operator {
+                Mul => IrValue::Const(l * r),
+                Div => IrValue::Const(l / r),
+                Plus => IrValue::Const(l + r),
+                BinaryOperator::Minus => IrValue::Const(l - r),
+                Greater => if l > r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                GreaterEqual => if l >= r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                Less => if l < r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                LessEqual => if l <= r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                NotEqual => if l != r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+                Equal => if l == r {
+                    IrValue::True
+                } else {
+                    IrValue::False
+                }
+            };
+        }
+        let op: IrOperator = match expr.operator {
+            Mul => IrOperator::ArithOp(ArithOp::Mul),
+            Div => IrOperator::ArithOp(ArithOp::Div),
+            Plus => IrOperator::ArithOp(ArithOp::Plus),
+            Greater => IrOperator::CmpOp(CmpOp::Gt),
+            GreaterEqual => IrOperator::CmpOp(CmpOp::Ge),
+            Less => IrOperator::CmpOp(CmpOp::Lt),
+            LessEqual => IrOperator::CmpOp(CmpOp::Le),
+            NotEqual => IrOperator::CmpOp(CmpOp::Ne),
+            Equal => IrOperator::CmpOp(CmpOp::Eq),
+            BinaryOperator::Minus => IrOperator::ArithOp(ArithOp::Sub),
+        };
+        let idx = self.get_idx();
+        self.instructments.push(IrInst::Binary {
+            dst: Temp { idx },
+            op,
+            lsh: left_value,
+            rhs: right_value,
+        });
+        self.new_temp()
+    }
+
+
     fn lower_unary_expr(&mut self, expr: &UnaryExpression) -> IrValue {
         match &expr.prefix {
             Some(op) => match op {
@@ -262,7 +340,7 @@ impl IrGen {
                 return IrValue::Const(*number);
             }
             PrimaryExpression::Expression(e) => {
-                return self.lower_expr(&Box::new(e));
+                return self.lower_expr(&Box::new(e), String::from(""));
             }
             PrimaryExpression::Identifier(i) => {
                 let idx = self.get_idx();
